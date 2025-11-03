@@ -38,7 +38,7 @@ app.post('/', async (c) => {
     // Limit max results to prevent excessive database queries
     const sanitizedLimit = Math.min(Math.max(1, limit), 20);
 
-    const client = getTursoClient();
+    const client = await getTursoClient();
 
     // Get embedding provider from environment
     const embeddingProvider =

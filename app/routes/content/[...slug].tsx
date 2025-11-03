@@ -43,7 +43,7 @@ export default createRoute(async (c) => {
     return c.redirect('/');
   }
 
-  const client = getTursoClient();
+  const client = await getTursoClient();
   const article = await getArticleBySlug(client, slug);
 
   if (!article) {

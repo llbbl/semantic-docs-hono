@@ -5,7 +5,7 @@ import DocsHeader from '../components/DocsHeader';
 import DocsSidebar from '../components/DocsSidebar';
 
 export default createRoute(async (c) => {
-  const client = getTursoClient();
+  const client = await getTursoClient();
   const allArticles = await getAllArticles(client);
   const currentPath = c.req.path;
 

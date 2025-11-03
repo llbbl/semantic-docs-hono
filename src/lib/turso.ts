@@ -4,13 +4,16 @@
  * Uses @libsql/client/web for Cloudflare Workers compatibility
  */
 
-import { type Client, createClient } from '@libsql/client/web';
+import type { Client } from '@libsql/client/web';
 import { logger } from './logger';
 
 let client: Client | null = null;
 
-export function getTursoClient(): Client {
+export async function getTursoClient(): Promise<Client> {
   if (!client) {
+    // Dynamic import to avoid module-level initialization
+    const { createClient } = await import('@libsql/client/web');
+
     // In Vite, process.env is available server-side, but we need to ensure .env is loaded
     const url = process.env.TURSO_DB_URL;
     const authToken = process.env.TURSO_AUTH_TOKEN;
