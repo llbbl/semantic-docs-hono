@@ -28,11 +28,8 @@ export interface SearchOptions {
   };
 }
 
-// Cache for the transformers pipeline
-let pipelineCache: any = null;
-
 /**
- * Generate embedding - supports local, Gemini, and OpenAI
+ * Generate embedding - supports Gemini and OpenAI
  */
 async function generateEmbedding(
   text: string,
@@ -41,29 +38,12 @@ async function generateEmbedding(
   const { provider = 'local' } = options;
 
   if (provider === 'local') {
-    // Use local transformer
-    // @ts-expect-error - @xenova/transformers is externalized for Workers
-    const { pipeline } = await import('@xenova/transformers');
-
-    if (!pipelineCache) {
-      pipelineCache = await pipeline(
-        'feature-extraction',
-        'Xenova/all-MiniLM-L6-v2',
-      );
-    }
-
-    const output = await pipelineCache(text, {
-      pooling: 'mean',
-      normalize: true,
-    });
-    const embedding = Array.from(output.data) as number[];
-
-    // Pad to 768 dimensions
-    while (embedding.length < 768) {
-      embedding.push(0);
-    }
-
-    return embedding.slice(0, 768);
+    // Local embeddings not supported in Cloudflare Workers
+    throw new Error(
+      'Local embedding provider is not supported in Cloudflare Workers. ' +
+        'Please use "gemini" or "openai" provider instead. ' +
+        'Set EMBEDDING_PROVIDER environment variable to "gemini" or "openai".',
+    );
   }
 
   if (provider === 'gemini') {
