@@ -239,6 +239,16 @@ npx wrangler secret put OPENAI_API_KEY
 2. Settings > Variables and Secrets
 3. Add the environment variables listed above
 
+### Rate Limiting (Important!)
+
+⚠️ **Configure rate limiting via Cloudflare Dashboard** to protect your API:
+
+1. Go to Security → WAF → Rate Limiting Rules
+2. Create rule for `/api/search` endpoint
+3. Recommended: 20 requests/minute per IP
+
+📖 See [docs/RATE_LIMITING.md](./docs/RATE_LIMITING.md) for detailed setup instructions.
+
 ### Environment Variables
 
 Required:

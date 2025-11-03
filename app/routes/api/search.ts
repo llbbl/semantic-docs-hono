@@ -7,12 +7,11 @@ import { Hono } from 'hono';
 import { logger } from '../../../src/lib/logger';
 import { search } from '../../../src/lib/search-wrapper';
 import { getTursoClient } from '../../../src/lib/turso';
-import { rateLimitMiddleware } from '../../../src/middleware/rateLimit';
 
 const app = new Hono();
 
-// Apply rate limiting: 20 requests per minute per IP
-app.use('*', rateLimitMiddleware({ maxRequests: 20, windowSeconds: 60 }));
+// Note: Rate limiting should be configured via Cloudflare Dashboard
+// See docs/RATE_LIMITING.md for setup instructions
 
 // POST endpoint for search
 app.post('/', async (c) => {
