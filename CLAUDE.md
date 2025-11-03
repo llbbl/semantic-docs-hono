@@ -233,3 +233,82 @@ pnpm deploy
 #### Islands Hydration
 - React islands need client-side hydration via `app/client.tsx`
 - Script is included but may need optimization for Workers
+
+## Verification Checklist
+
+**IMPORTANT**: Before declaring any changes complete, ALL items in this checklist must pass. This is mandatory for every PR, deployment, or major change.
+
+### 1. Code Quality & Compilation
+- [ ] TypeScript compiles with zero errors: `npx tsc --noEmit`
+- [ ] Linter passes with no errors: `pnpm lint`
+- [ ] No critical warnings in build output
+- [ ] Build bundle size is reasonable (< 300 KB)
+
+### 2. Build & Deployment
+- [ ] Production build succeeds: `pnpm build`
+- [ ] Wrangler dry-run succeeds: `npx wrangler deploy --dry-run`
+- [ ] No "global scope async" errors in Workers validation
+- [ ] No unresolved dependencies in bundle
+- [ ] All external modules properly configured
+
+### 3. Development Mode
+- [ ] Dev server starts without errors: `pnpm dev`
+- [ ] Homepage loads and renders HTML: `curl http://localhost:5173/`
+- [ ] No SSR errors in terminal output
+- [ ] CSS loads and applies correctly
+- [ ] JavaScript client bundle loads
+- [ ] React islands mount (Search, ThemeSwitcher, DocsToc)
+- [ ] No browser console errors (check DevTools)
+- [ ] Hot module reload works
+
+### 4. API Endpoints (via curl)
+- [ ] Homepage returns HTML: `curl http://localhost:5173/ | grep -q "Astro Vault"`
+- [ ] Search API responds: `curl -X POST http://localhost:5173/api/search -H "Content-Type: application/json" -d '{"query":"test"}'`
+- [ ] Search API validates input (rejects malformed requests)
+- [ ] Rate limiting headers present in API responses
+
+### 5. Navigation & UI
+- [ ] Sidebar renders (if content exists in `./content`)
+- [ ] Header renders with correct links
+- [ ] Theme switcher button visible
+- [ ] Search dialog opens (can click/interact)
+- [ ] Mobile menu button works
+- [ ] GitHub link present and correct
+
+### 6. Content & Routing
+- [ ] Content pages load if they exist: `/content/*`
+- [ ] 404 handling works for missing pages
+- [ ] Static files serve correctly
+
+### 7. Database & External Services
+- [ ] Turso client initializes without errors
+- [ ] Environment variables load correctly in dev mode
+- [ ] Graceful error messages when credentials missing
+- [ ] Search returns proper error when embedding provider not set
+
+### 8. Workers Compatibility
+- [ ] No `module is not defined` errors
+- [ ] No `fetch() at global scope` errors
+- [ ] No async operations outside request handlers
+- [ ] `nodejs_compat` flag set in `wrangler.toml`
+- [ ] Promise-limit handled correctly (dev vs prod modes)
+- [ ] No CommonJS dependencies bundled incorrectly
+
+### 9. Documentation
+- [ ] README.md deployment instructions accurate
+- [ ] Environment variables documented
+- [ ] `wrangler.toml` has correct settings
+- [ ] CLAUDE.md context is current
+
+### 10. Final Smoke Tests
+Run all these commands in sequence - all must pass:
+```bash
+pnpm lint                        # Linter passes
+npx tsc --noEmit                 # TypeScript compiles
+pnpm build                       # Build succeeds
+npx wrangler deploy --dry-run    # Deployment validates
+pnpm dev                         # Dev server starts
+# Then test in browser at http://localhost:5173/
+```
+
+**If any item fails, do NOT declare the work complete.** Fix the issue and re-run the full checklist.
