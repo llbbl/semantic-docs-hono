@@ -18,6 +18,18 @@ export default defineConfig(({ mode }) => {
       'process.env.TURSO_AUTH_TOKEN': JSON.stringify(env.TURSO_AUTH_TOKEN),
       'process.env.EMBEDDING_PROVIDER': JSON.stringify(env.EMBEDDING_PROVIDER),
     },
+    build: {
+      rollupOptions: {
+        external: [
+          '@xenova/transformers',
+          'onnxruntime-node',
+          'ws',
+          'bufferutil',
+          'utf-8-validate',
+          'promise-limit',
+        ],
+      },
+    },
     plugins: [honox(), tailwindcss(), devServer(), build()],
     resolve: {
       alias: {

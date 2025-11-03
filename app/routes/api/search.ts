@@ -3,11 +3,11 @@
  * Uses libsql-search for semantic search
  */
 
-import { logger } from '@logan/logger';
 import { Hono } from 'hono';
 import { search } from '../../../src/lib/search-wrapper';
 import { getTursoClient } from '../../../src/lib/turso';
 import { rateLimitMiddleware } from '../../../src/middleware/rateLimit';
+import { logger } from '../../../src/lib/logger';
 
 const app = new Hono();
 
@@ -60,7 +60,9 @@ app.post('/', async (c) => {
       query,
     });
   } catch (error) {
-    logger.error('Search error:', error);
+    logger.error('Search error', {
+      error: error instanceof Error ? error.message : String(error),
+    });
 
     return c.json(
       {
