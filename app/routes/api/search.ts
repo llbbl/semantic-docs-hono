@@ -4,9 +4,9 @@
  */
 
 import { Hono } from 'hono';
-import { logger } from '../../../src/lib/logger';
-import { search } from '../../../src/lib/search-wrapper';
-import { getTursoClient } from '../../../src/lib/turso';
+import { search } from '@/lib/libsql-search-runtime.ts';
+import { logger } from '@/lib/logger.ts';
+import { getTursoClient } from '@/lib/turso.ts';
 
 const app = new Hono();
 
@@ -74,9 +74,16 @@ app.post('/', async (c) => {
   }
 });
 
-// GET endpoint returns method not allowed
-app.get('/', async (c) => {
-  return c.json({ error: 'Use POST method for search' }, 405);
+// Handle GET requests with method not allowed
+app.all('/', async (c) => {
+  if (c.req.method !== 'POST') {
+    return c.json(
+      { error: 'Method not allowed', message: 'Use POST method for search' },
+      405,
+    );
+  }
+  // This shouldn't be reached, but just in case
+  return c.json({ error: 'Invalid request' }, 400);
 });
 
 export default app;

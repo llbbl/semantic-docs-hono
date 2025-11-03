@@ -3,6 +3,7 @@ name = "hono"
 compatibility_date = "2025-01-03"
 compatibility_flags = ["nodejs_compat"]
 main = "dist/index.js"
+keep_vars = true
 
 # Build configuration
 [build]

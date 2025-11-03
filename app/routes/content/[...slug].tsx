@@ -1,12 +1,9 @@
 import { createRoute } from 'honox/factory';
 import { marked } from 'marked';
-import {
-  getAllArticles,
-  getArticleBySlug,
-} from '../../../src/lib/search-wrapper';
-import { getTursoClient } from '../../../src/lib/turso';
-import DocsHeader from '../../components/DocsHeader';
-import DocsSidebar from '../../components/DocsSidebar';
+import { getAllArticles, getArticleBySlug } from '@/lib/search-wrapper';
+import { getTursoClient } from '@/lib/turso';
+import DocsHeader from '~/components/DocsHeader';
+import DocsSidebar from '~/components/DocsSidebar';
 
 // Configure marked to add IDs to headings and handle external links
 marked.use({

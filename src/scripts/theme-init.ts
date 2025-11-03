@@ -3,7 +3,7 @@
  * This runs before the page renders to prevent flash
  */
 
-import { defaultTheme, themes } from '../config/themes';
+import { defaultTheme, themes } from '@/config/themes';
 
 const savedTheme = localStorage.getItem('theme') || defaultTheme;
 const theme = themes.find((t) => t.name === savedTheme);

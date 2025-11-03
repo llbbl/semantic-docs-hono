@@ -1,8 +1,8 @@
 import { createRoute } from 'honox/factory';
-import { getAllArticles } from '../../src/lib/search-wrapper';
-import { getTursoClient } from '../../src/lib/turso';
-import DocsHeader from '../components/DocsHeader';
-import DocsSidebar from '../components/DocsSidebar';
+import { getAllArticles } from '@/lib/search-wrapper';
+import { getTursoClient } from '@/lib/turso';
+import DocsHeader from '~/components/DocsHeader';
+import DocsSidebar from '~/components/DocsSidebar';
 
 export default createRoute(async (c) => {
   const client = await getTursoClient();
