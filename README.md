@@ -197,27 +197,47 @@ pnpm lint:fix         # Auto-fix linting issues
 pnpm format           # Format all files
 
 # Deployment
-pnpm deploy           # Deploy to Cloudflare Pages (via wrangler)
+pnpm deploy           # Deploy to Cloudflare Workers
 ```
 
 ## Deployment
 
-### Cloudflare Workers/Pages
+### Cloudflare Workers
 
-The project includes a `wrangler.toml` configuration for Cloudflare deployment:
+Deploy to Cloudflare Workers using Wrangler:
 
 ```bash
-# Build
-pnpm build
-
-# Deploy
+# Deploy (builds automatically)
 pnpm deploy
+
+# Or directly with wrangler
+npx wrangler deploy
 ```
 
-Set environment variables in your Cloudflare dashboard:
-- `TURSO_DB_URL`
-- `TURSO_AUTH_TOKEN`
-- `EMBEDDING_PROVIDER` (optional, defaults to 'local')
+The `wrangler.toml` is configured to build the project automatically before deployment.
+
+**Set environment variables (secrets) using Wrangler CLI:**
+
+```bash
+# Set Turso credentials (required)
+npx wrangler secret put TURSO_DB_URL
+npx wrangler secret put TURSO_AUTH_TOKEN
+
+# Set embedding provider (required for production)
+npx wrangler secret put EMBEDDING_PROVIDER
+# Enter: gemini or openai
+
+# If using Gemini
+npx wrangler secret put GEMINI_API_KEY
+
+# If using OpenAI
+npx wrangler secret put OPENAI_API_KEY
+```
+
+**Or set via Cloudflare Dashboard:**
+1. Go to Workers & Pages > Your Worker
+2. Settings > Variables and Secrets
+3. Add the environment variables listed above
 
 ### Environment Variables
 

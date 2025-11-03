@@ -1,16 +1,15 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "semantic-docs-hono"
 compatibility_date = "2025-01-03"
+main = "dist/index.js"
 
-# Environment variables
+# Build configuration
+[build]
+command = "pnpm build"
+
+# Environment variables (set via dashboard or `wrangler secret put`)
 [vars]
-# TURSO_DB_URL and TURSO_AUTH_TOKEN should be set via `wrangler secret put` or dashboard
-# EMBEDDING_PROVIDER can be "local", "gemini", or "openai" (default: local)
-
-# For development
-[env.dev]
-# Local development settings
-
-# For production
-[env.production]
-# Production settings
+# Required:
+# - TURSO_DB_URL (set as secret)
+# - TURSO_AUTH_TOKEN (set as secret)
+# - EMBEDDING_PROVIDER = "gemini" or "openai" (local not supported in Workers)
