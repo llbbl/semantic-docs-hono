@@ -28,7 +28,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      exclude: ['node_modules/', 'dist/', '**/*.config.*', '**/scripts/**', '.old-astro-backup/**'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        '**/*.config.*',
+        '**/scripts/**',
+        '.old-astro-backup/**',
+      ],
     },
   },
 });

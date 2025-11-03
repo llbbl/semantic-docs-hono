@@ -8,9 +8,10 @@ import { defineConfig, loadEnv } from 'vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), '');
+  const isDev = command === 'serve';
 
   return {
     define: {
@@ -46,6 +47,8 @@ export default defineConfig(({ mode }) => {
         'utf-8-validate',
         'onnxruntime-node',
         '@xenova/transformers',
+        // Only externalize promise-limit in dev mode
+        ...(isDev ? ['promise-limit'] : []),
       ],
       resolve: {
         conditions: ['workerd', 'worker', 'browser'],
@@ -54,6 +57,7 @@ export default defineConfig(({ mode }) => {
       noExternal: ['@libsql/client'],
     },
     optimizeDeps: {
+      include: ['promise-limit'],
       exclude: [
         'ws',
         'bufferutil',

@@ -4,10 +4,10 @@
  */
 
 import { Hono } from 'hono';
+import { logger } from '../../../src/lib/logger';
 import { search } from '../../../src/lib/search-wrapper';
 import { getTursoClient } from '../../../src/lib/turso';
 import { rateLimitMiddleware } from '../../../src/middleware/rateLimit';
-import { logger } from '../../../src/lib/logger';
 
 const app = new Hono();
 
@@ -42,7 +42,8 @@ app.post('/', async (c) => {
 
     // Get embedding provider from environment
     const embeddingProvider =
-      (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') || 'local';
+      (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') ||
+      'local';
 
     // Perform vector search
     const results = await search({

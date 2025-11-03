@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "semantic-docs-hono"
+name = "hono"
 compatibility_date = "2025-01-03"
 compatibility_flags = ["nodejs_compat"]
 main = "dist/index.js"

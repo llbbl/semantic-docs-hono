@@ -3,7 +3,8 @@
  * Automatically generated from page headings
  */
 
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 interface TocItem {
   id: string;
@@ -76,7 +77,9 @@ export default function DocsToc() {
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
-                  onClick={(e) => handleClick(e as unknown as React.MouseEvent, item.id)}
+                  onClick={(e) =>
+                    handleClick(e as unknown as React.MouseEvent, item.id)
+                  }
                   className={`
                     block text-sm transition-colors
                     ${item.level === 3 ? 'pl-4' : ''}

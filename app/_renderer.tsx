@@ -95,10 +95,12 @@ const Layout: FC<PropsWithChildren<LayoutProps>> = ({
   );
 };
 
-export default jsxRenderer(({ children, title, description }: PropsWithChildren<LayoutProps>) => {
-  return (
-    <Layout title={title} description={description}>
-      {children}
-    </Layout>
-  );
-});
+export default jsxRenderer(
+  ({ children, title, description }: PropsWithChildren<LayoutProps>) => {
+    return (
+      <Layout title={title} description={description}>
+        {children}
+      </Layout>
+    );
+  },
+);
