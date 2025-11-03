@@ -12,7 +12,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
+} from './ui/command';
 
 interface SearchResult {
   id: number;
@@ -63,7 +63,7 @@ export default function Search({
       setError(null);
 
       try {
-        const response = await fetch('/api/search.json', {
+        const response = await fetch('/api/search', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -76,7 +76,7 @@ export default function Search({
           throw new Error('Search failed');
         }
 
-        const data = await response.json();
+        const data = (await response.json()) as { results: SearchResult[] };
         setResults(data.results || []);
       } catch (err) {
         console.error('Search error:', err);
@@ -171,11 +171,13 @@ export default function Search({
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
+        {/* @ts-expect-error - React 19 type compatibility with cmdk */}
         <CommandInput
           placeholder={placeholder}
           value={query}
           onValueChange={handleValueChange}
         />
+        {/* @ts-expect-error - React 19 type compatibility with cmdk */}
         <CommandList>
           {loading && (
             <div className="py-6 text-center text-sm text-muted-foreground">
@@ -188,6 +190,7 @@ export default function Search({
             </div>
           )}
           {!loading && !error && query.length >= 2 && results.length === 0 && (
+            // @ts-expect-error - React 19 type compatibility with cmdk
             <CommandEmpty>No results found for "{query}"</CommandEmpty>
           )}
           {!loading && !error && query.length < 2 && (
@@ -198,8 +201,10 @@ export default function Search({
           {!loading &&
             !error &&
             Object.entries(groupedResults).map(([folder, folderResults]) => (
+              // @ts-expect-error - React 19 type compatibility with cmdk
               <CommandGroup key={folder} heading={folder.toUpperCase()}>
                 {folderResults.map((result) => (
+                  // @ts-expect-error - React 19 type compatibility with cmdk
                   <CommandItem
                     key={result.id}
                     value={result.title}

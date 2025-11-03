@@ -1,7 +1,7 @@
 {
-  "name": "semantic-docs",
+  "name": "semantic-docs-hono",
   "version": "1.1.1",
-  "description": "Documentation theme with semantic vector search powered by libsql-search",
+  "description": "HonoX documentation theme with semantic vector search for Cloudflare Workers",
   "type": "module",
   "keywords": [
     "documentation",
@@ -9,7 +9,9 @@
     "semantic-search",
     "vector-search",
     "theme",
-    "astro",
+    "hono",
+    "honox",
+    "cloudflare-workers",
     "turso"
   ],
   "author": "llbbl",
@@ -23,9 +25,10 @@
   },
   "homepage": "https://github.com/llbbl/semantic-docs#readme",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "wrangler pages dev",
+    "deploy": "wrangler pages deploy",
     "db:init": "tsx --env-file=.env scripts/init-db.ts",
     "db:init:local": "tsx scripts/init-db.ts",
     "index": "tsx --env-file=.env scripts/index-content.ts",
@@ -38,17 +41,19 @@
     "format": "biome format --write ."
   },
   "dependencies": {
-    "@astrojs/node": "^9.5.0",
-    "@astrojs/react": "^4.4.0",
+    "@hono/react-renderer": "^1.0.1",
+    "@hono/vite-build": "^1.7.0",
+    "@hono/vite-dev-server": "^0.16.0",
     "@google/generative-ai": "^0.24.1",
     "@libsql/client": "^0.15.15",
     "@logan/libsql-search": "jsr:^0.1.3",
     "@logan/logger": "jsr:^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
     "@tailwindcss/vite": "^4.1.14",
-    "astro": "^5.14.5",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "hono": "^4.7.10",
+    "honox": "^0.1.32",
     "lucide-react": "^0.546.0",
     "marked": "^16.4.0",
     "openai": "^6.7.0",
@@ -60,6 +65,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.6",
+    "@cloudflare/workers-types": "^4.20250111.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.19.21",
@@ -70,7 +76,9 @@
     "happy-dom": "^20.0.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "vite": "^6.0.7",
+    "vitest": "^3.2.4",
+    "wrangler": "^3.100.0"
   },
   "pnpm": {
     "allowedBuilds": [

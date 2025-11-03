@@ -13,6 +13,13 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
+      '**/.old-astro-backup/**',
+    ],
     server: {
       deps: {
         inline: ['@libsql/client'],
@@ -21,7 +28,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      exclude: ['node_modules/', 'dist/', '**/*.config.*', '**/scripts/**'],
+      exclude: ['node_modules/', 'dist/', '**/*.config.*', '**/scripts/**', '.old-astro-backup/**'],
     },
   },
 });

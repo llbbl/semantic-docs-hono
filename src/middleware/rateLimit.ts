@@ -1,7 +1,9 @@
 /**
- * Simple in-memory rate limiter
+ * Simple in-memory rate limiter for Hono
  * For production with multiple servers, use Redis or edge rate limiting
  */
+
+import type { Context, Next } from 'hono';
 
 interface RateLimitEntry {
   count: number;
@@ -98,5 +100,40 @@ export function createRateLimitHeaders(
     'X-RateLimit-Limit': result.limit.toString(),
     'X-RateLimit-Remaining': result.remaining.toString(),
     'X-RateLimit-Reset': Math.floor(result.resetTime / 1000).toString(),
+  };
+}
+
+/**
+ * Hono middleware for rate limiting
+ */
+export function rateLimitMiddleware(
+  config: RateLimitConfig = { maxRequests: 20, windowSeconds: 60 },
+) {
+  return async (c: Context, next: Next) => {
+    const rateLimitResult = checkRateLimit(c.req.raw, config);
+    const rateLimitHeaders = createRateLimitHeaders(rateLimitResult);
+
+    // Set rate limit headers
+    Object.entries(rateLimitHeaders).forEach(([key, value]) => {
+      c.header(key, value);
+    });
+
+    if (!rateLimitResult.allowed) {
+      const retryAfter = Math.ceil(
+        (rateLimitResult.resetTime - Date.now()) / 1000,
+      );
+      c.header('Retry-After', retryAfter.toString());
+
+      return c.json(
+        {
+          error: 'Too many requests',
+          message: 'Rate limit exceeded. Please try again later.',
+          retryAfter,
+        },
+        429,
+      );
+    }
+
+    await next();
   };
 }

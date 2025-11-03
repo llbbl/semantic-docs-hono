@@ -127,7 +127,7 @@ console.log(embedding.data);  // [0.123, -0.456, 0.789, ...]
 | text-embedding-ada-002 (OpenAI) | 1536 | API | Excellent |
 | textembedding-gecko (Gemini) | 768 | API | Excellent |
 
-## Implementation in Astro Vault
+## Implementation in Semantic Docs Hono
 
 ### Indexing Content
 ```typescript

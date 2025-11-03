@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**semantic-docs** is an Astro-based documentation theme with semantic vector search powered by libsql-search. It combines static site generation with server-rendered search using Turso (libSQL) for edge-optimized semantic search capabilities.
+**semantic-docs-hono** is a HonoX-based documentation theme with semantic vector search powered by libsql-search. It's designed for deployment on Cloudflare Workers and uses Turso (libSQL) for edge-optimized semantic search capabilities.
+
+**Key differences from semantic-docs (Astro)**:
+- Built with **HonoX** instead of Astro
+- Targets **Cloudflare Workers** runtime
+- Uses **Hono JSX** for SSR + **React islands** for client-side interactivity
+- Manual HTML rendering with `c.html()` instead of Astro layouts
 
 ## Essential Commands
 
@@ -13,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install dependencies
 pnpm install
 
-# Start dev server (runs on http://localhost:4321)
+# Start dev server (runs on http://localhost:5174)
 pnpm dev
 
 # Build for production
@@ -25,13 +31,9 @@ pnpm preview
 
 ### Content Management
 ```bash
-# Turso (default - requires .env with credentials)
+# Turso (requires .env with credentials)
 pnpm db:init    # Initialize Turso database schema
 pnpm index      # Index markdown content to Turso
-
-# Local libSQL (for CI/testing - no .env required)
-pnpm db:init:local   # Initialize local database (file:local.db)
-pnpm index:local     # Index to local database
 
 # Run tests
 pnpm test
@@ -43,60 +45,90 @@ pnpm format     # Format all files
 ```
 
 **Important:**
-- Always run `pnpm index` (or `pnpm index:local`) after adding/modifying content in `./content` directory before building.
-- Use `db:init` and `index` for production with Turso (loads `.env` file)
-- Use `db:init:local` and `index:local` for CI/local testing without Turso credentials
-- The dev server (`pnpm dev`) works with either database type
+- Always run `pnpm index` after adding/modifying content in `./content` directory before building
+- The dev server (`pnpm dev`) works with Turso database
+- Use cloud embedding providers (`gemini` or `openai`) for production Workers deployment
 
 ## Architecture
 
+### Framework & Runtime
+- **HonoX**: File-based routing meta-framework built on Hono
+- **Runtime**: Cloudflare Workers (not Node.js)
+- **Database**: Turso (libSQL) with vector search via `@libsql/client/web`
+- **Build Tool**: Vite with HonoX plugins
+
 ### Content Flow
 1. **Markdown → Database**: Content in `./content` is indexed into Turso via `scripts/index-content.ts`
-2. **libsql-search**: Handles embedding generation (local/Gemini/OpenAI), vector storage, and semantic search
-3. **Static Generation**: Article pages are pre-rendered at build time using `getStaticPaths()`
-4. **Server Search**: Search API runs server-side at `/api/search.json` (requires `output: 'server'` with Node.js adapter)
+2. **libsql-search**: Handles embedding generation and vector storage
+3. **SSR**: Routes are rendered server-side with Hono JSX
+4. **Islands**: React components hydrated client-side for interactivity
 
 ### Key Components
-- **Search.tsx**: Client-side search UI with debounced API calls (300ms), displays results in dropdown
-- **DocsHeader.astro**: Header with embedded search component
-- **DocsSidebar.astro**: Navigation sidebar built from folder structure in database
-- **DocsToc.tsx**: Auto-generated table of contents from article headings
-- **[...slug].astro**: Dynamic article pages, uses `getStaticPaths()` to pre-render all articles
+
+#### Routes (`app/routes/`)
+- **index.tsx**: Home page (server-rendered with Hono JSX)
+- **content/[...slug].tsx**: Dynamic article pages (catch-all route)
+- **api/search.ts**: Search API endpoint (Hono app)
+
+All routes wrapped with `createRoute()` from `honox/factory` and return `c.html()` or `c.json()`.
+
+#### Components (`app/components/`)
+- **DocsHeader.tsx**: Header with nav (Hono JSX)
+- **DocsSidebar.tsx**: Navigation sidebar (Hono JSX)
+- Uses `import type { FC } from 'hono/jsx'` for typing
+
+#### Islands (`app/islands/`)
+- **Search.tsx**: Search dialog with ⌘K shortcut (React)
+- **ThemeSwitcher.tsx**: Theme toggle (React)
+- **DocsToc.tsx**: Table of contents (React)
+- Hydrated via `app/client.tsx` using `react-dom/client`
 
 ### Database Integration
-- **src/lib/turso.ts**: Singleton client wrapper, re-exports libsql-search utilities
+- **src/lib/turso.ts**: Turso client wrapper using `@libsql/client/web`
+- **src/lib/libsql-search-runtime.ts**: Standalone search implementation (avoids CommonJS deps)
+- **src/lib/search-wrapper.ts**: Re-exports from runtime
 - **scripts/init-db.ts**: Initializes database schema with vector search support
 - **scripts/index-content.ts**: Indexes markdown files, creates table with 768-dimension vectors
-- All content queries use functions from libsql-search: `getAllArticles()`, `getArticleBySlug()`, `getArticlesByFolder()`, `getFolders()`
 
 ### Environment Variables
-Optional in `.env`:
-- `TURSO_DB_URL`: Turso database URL (libsql://...) - if not set, uses local libSQL file
-- `TURSO_AUTH_TOKEN`: Turso authentication token - if not set, uses local libSQL file
-- `EMBEDDING_PROVIDER`: "local" (default), "gemini", or "openai"
-- Optional: `GEMINI_API_KEY` or `OPENAI_API_KEY` (if using cloud providers)
+Set in `.env` and injected at build time via Vite's `defineConfig`:
+- `TURSO_DB_URL`: Turso database URL (libsql://...)
+- `TURSO_AUTH_TOKEN`: Turso authentication token
+- `EMBEDDING_PROVIDER`: "local", "gemini", or "openai" (default: "local")
+- Optional: `GEMINI_API_KEY`, `OPENAI_API_KEY`
 
-**Local Development**: If Turso credentials aren't provided, the project automatically falls back to a local SQLite file (`local.db`) for database operations. This is useful for CI builds and local development without cloud dependencies.
+Variables are accessed via `process.env` and replaced at build time by Vite.
 
 ## Critical Configuration
 
-### Server-Side Rendering + Dual Adapter Support
-The search API endpoint requires SSR with an adapter. The configuration uses:
-- `output: 'server'` - Enables server-side rendering
-- **Dual adapter support** - Conditionally uses Node.js or Cloudflare adapter based on `ADAPTER` env var
-  - Default: `node({ mode: 'standalone' })` - For traditional Node.js deployments
-  - Cloudflare: `cloudflare()` - For Cloudflare Workers (set `ADAPTER=cloudflare`)
-- Article pages marked with `prerender: true` are pre-rendered as static HTML
-- Search API marked with `prerender: false` runs server-side
+### Vite Config (`vite.config.ts`)
+```typescript
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
 
-**Adapter Selection** (astro.config.mjs:14-16):
-```js
-const adapter = process.env.ADAPTER === 'cloudflare'
-  ? cloudflare()
-  : node({ mode: 'standalone' });
+  return {
+    define: {
+      'process.env.TURSO_DB_URL': JSON.stringify(env.TURSO_DB_URL),
+      'process.env.TURSO_AUTH_TOKEN': JSON.stringify(env.TURSO_AUTH_TOKEN),
+      'process.env.EMBEDDING_PROVIDER': JSON.stringify(env.EMBEDDING_PROVIDER),
+    },
+    plugins: [honox(), tailwindcss(), devServer(), build()],
+    resolve: {
+      alias: {
+        '@libsql/client$': '@libsql/client/web', // Force web version
+      },
+      conditions: ['workerd', 'worker', 'browser'],
+    },
+    ssr: {
+      external: ['@xenova/transformers'], // Externalize for Workers
+      noExternal: ['@libsql/client'],
+    },
+  };
+});
 ```
 
-**Never** remove the adapter or change output to 'static', or the search API will break.
+### TypeScript Config
+`jsxImportSource` is set to `"hono/jsx"` for server components. **Never** change this.
 
 ### Content Structure
 Content in `./content` must follow this pattern:
@@ -114,11 +146,26 @@ tags: [tag1, tag2]
 ---
 ```
 
-### Selective Pre-rendering
-- Article pages (`/content/[...slug].astro`): Pre-rendered static at build time (`export const prerender = true`)
-- Search API (`/api/search.json.ts`): Server-rendered on-demand (`export const prerender = false`)
-- This approach provides fast static pages with dynamic server-side search
-- Uses `getStaticPaths()` to generate all article pages at build time
+### Routing Conventions
+- **Catch-all routes**: Use `[...slug].tsx` notation
+- **Route extraction**: Parse slug from `c.req.path`
+- **HTML rendering**: Use `c.html(<html>...</html>)` not `c.render()`
+- **API routes**: Return `c.json()` for JSON responses
+
+Example:
+```tsx
+export default createRoute(async (c) => {
+  const slug = c.req.path.replace('/content/', '');
+  const article = await getArticleBySlug(client, slug);
+
+  return c.html(
+    <html>
+      <head>...</head>
+      <body>...</body>
+    </html>
+  );
+});
+```
 
 ## Integration Points
 
@@ -126,48 +173,63 @@ tags: [tag1, tag2]
 The project relies heavily on libsql-search. When modifying search behavior:
 1. Check libsql-search documentation for available options
 2. Update `scripts/index-content.ts` for indexing changes
-3. Update `src/pages/api/search.json.ts` for search query changes
+3. Update `app/routes/api/search.ts` for search query changes
 4. Maintain embedding dimension consistency (768) across indexing and search
 
-### Customizing Embedding Providers
-To switch providers, update `.env` and ensure API keys are set. The dimension (768) must match across:
-- `scripts/index-content.ts` (createTable and indexContent)
-- Search API (automatically uses same provider)
-- Re-index content after switching providers
+### React Islands
+To add a new island:
+1. Create component in `app/islands/MyComponent.tsx`
+2. Use React imports: `import { useState } from 'react'`
+3. Add to page with `data-hydrate`, `data-component`, `data-props` attributes
+4. Hydration happens automatically via `app/client.tsx`
+
+Example:
+```tsx
+<div
+  data-hydrate="true"
+  data-component="MyComponent"
+  data-props='{"foo":"bar"}'
+/>
+```
 
 ### Styling
-- Uses Tailwind CSS 4 via Vite plugin
-- RGB hex colors for maximum browser compatibility
-- CSS variables defined in global.css for theming
-- Multi-theme system with 6 pre-built themes (dark, light, ocean, forest, sunset, purple)
-- ThemeSwitcher component allows runtime theme changes
-- Complementary colors for sidebar (darker) and TOC (lighter) in each theme
+- Uses **Tailwind CSS 4** via `@tailwindcss/vite` plugin
+- CSS variables defined in `app/style.css` for theming
+- Multi-theme system with 6 pre-built themes
+- Theme switching handled by `ThemeSwitcher` island
 
 ### Security & Rate Limiting
 - In-memory rate limiting on search API: 20 requests per minute per IP
 - Query length validation: 500 character maximum
 - Results limit enforcement: 1-20 results
-- Standard rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
-- See `docs/SECURITY.md` for comprehensive security considerations
+- See `src/middleware/rateLimit.ts`
 
-## Deployment Options
+## Deployment
 
-> **Note**: Cloudflare Workers/Pages deployment is being developed in the `cloudflare-workers` branch.
+### Cloudflare Workers
 
-### Node.js Platforms (Vercel, Netlify, etc.)
-
-The project uses the Node.js adapter and can be deployed to any platform supporting Node.js:
+The project is built for Cloudflare Workers deployment:
 
 ```bash
 # Build
 pnpm build
 
-# Deploy to your platform
-vercel deploy
-# or
-netlify deploy --prod
+# Deploy
+pnpm deploy
 ```
 
-### Deployment Requirements
-- **Always run** `pnpm index` (or `pnpm index:local` for testing) before deploying to ensure content is indexed
-- Set environment variables (`TURSO_DB_URL`, `TURSO_AUTH_TOKEN`, etc.) in your deployment platform's dashboard
+**Environment variables** must be set in Cloudflare dashboard:
+- `TURSO_DB_URL`
+- `TURSO_AUTH_TOKEN`
+- `EMBEDDING_PROVIDER` (use `gemini` or `openai` for production)
+
+### Known Limitations
+
+#### Local Embeddings in Workers
+- `@xenova/transformers` is externalized for Workers compatibility
+- Works in development but not in production Workers
+- **Solution**: Use `EMBEDDING_PROVIDER=gemini` or `openai` for production
+
+#### Islands Hydration
+- React islands need client-side hydration via `app/client.tsx`
+- Script is included but may need optimization for Workers

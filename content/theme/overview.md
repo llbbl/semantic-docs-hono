@@ -1,13 +1,13 @@
 ---
-title: Semantic Docs Theme Overview
-tags: [astro, theme, documentation, semantic-search]
+title: Semantic Docs Hono Theme Overview
+tags: [honox, theme, documentation, semantic-search, cloudflare-workers]
 ---
 
-# Semantic Docs Theme Overview
+# Semantic Docs Hono Theme Overview
 
-Semantic Docs is a modern documentation theme built with Astro, featuring semantic vector search powered by libSQL and Turso. It combines static site generation with server-rendered search capabilities for a fast, searchable documentation experience.
+Semantic Docs Hono is a modern documentation theme built with HonoX, featuring semantic vector search powered by libSQL and Turso. Optimized for Cloudflare Workers, it uses server-side rendering with React islands for a fast, searchable documentation experience.
 
-**Reference Implementation**: Check out [Astro Vault](https://vault.llbbl.com) ([source](https://github.com/llbbl/astro-vault)) to see this theme in action with extensive documentation content.
+**Reference Implementation**: This is a HonoX port of [semantic-docs](https://github.com/llbbl/semantic-docs). For the original Astro version, see the main repository.
 
 ## Key Features
 
@@ -27,12 +27,13 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 - **Rate limiting**: 20 requests per minute per IP
 - **Debounced requests**: Client waits 300ms before sending query
 - **Security**: Query validation, result limits, XSS protection
-- **Real-time**: Search API runs on Node.js adapter
+- **Real-time**: Search API runs on Cloudflare Workers edge
 
 ### Modern Tech Stack
-- **Astro 5**: Latest version with hybrid rendering
+- **HonoX**: File-based routing meta-framework for Hono
+- **Cloudflare Workers**: Edge runtime deployment
 - **Tailwind CSS 4**: Utility-first CSS with custom themes
-- **React 19**: For interactive components (search, TOC)
+- **React 19**: For interactive island components (search, TOC)
 - **TypeScript**: Full type safety across the codebase
 - **Biome**: Fast linting and formatting
 - **Vitest**: Unit testing with browser mode
@@ -42,21 +43,22 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 ### Database Layer
 ```
 ┌─────────────────────────────────────────┐
-│         Turso (Production)              │
-│  or  local.db (Development)             │
+│         Turso (libSQL)                  │
 │                                         │
 │  - Vector embeddings (768-dim)          │
 │  - Full-text search                     │
 │  - Metadata (tags, folders)             │
 └─────────────────────────────────────────┘
            ↑
-           │ @logan/libsql-search
+           │ @libsql/client/web
+           │ libsql-search-runtime
            │
 ┌─────────────────────────────────────────┐
-│         Astro Application               │
+│      HonoX on Cloudflare Workers        │
 │                                         │
-│  Build time: getStaticPaths()           │
-│  Runtime: Search API (/api/search.json) │
+│  SSR: Article pages with Hono JSX       │
+│  API: Search endpoint (/api/search)     │
+│  Islands: React hydration (client-side) │
 └─────────────────────────────────────────┘
 ```
 
@@ -80,31 +82,37 @@ Semantic Docs is a modern documentation theme built with Astro, featuring semant
 ## Project Structure
 
 ```
-semantic-docs/
-├── content/               # Markdown documentation files
-│   ├── getting-started/  # Getting started guides
-│   ├── features/         # Feature documentation
-│   ├── theme/            # Theme documentation
-│   └── ...
+semantic-docs-hono/
+├── app/                  # HonoX application
+│   ├── routes/          # File-based routes
+│   │   ├── index.tsx    # Home page
+│   │   ├── content/[...slug].tsx  # Article pages
+│   │   └── api/search.ts         # Search API
+│   ├── components/      # Server components (Hono JSX)
+│   │   ├── DocsHeader.tsx
+│   │   ├── DocsSidebar.tsx
+│   │   └── ui/
+│   ├── islands/         # Client components (React)
+│   │   ├── Search.tsx
+│   │   ├── ThemeSwitcher.tsx
+│   │   └── DocsToc.tsx
+│   ├── client.tsx       # Island hydration
+│   ├── server.ts        # Hono server entry
+│   └── style.css        # Tailwind styles
+├── content/             # Markdown documentation files
+│   ├── getting-started/ # Getting started guides
+│   ├── features/        # Feature documentation
+│   └── theme/           # Theme documentation
 ├── src/
-│   ├── components/       # Astro & React components
-│   │   ├── DocsHeader.astro
-│   │   ├── DocsSidebar.astro
-│   │   ├── DocsToc.tsx
-│   │   └── Search.tsx
-│   ├── layouts/          # Page layouts
-│   │   └── Layout.astro
-│   ├── pages/            # Route pages
-│   │   ├── index.astro
-│   │   ├── content/[...slug].astro
-│   │   └── api/search.json.ts
-│   ├── lib/              # Utilities
-│   │   └── turso.ts      # Database client
-│   └── styles/           # Global styles
-│       └── global.css
-├── scripts/              # Build scripts
-│   ├── init-db.ts        # Initialize database schema
-│   └── index-content.ts  # Index markdown to database
+│   ├── lib/            # Core utilities
+│   │   ├── turso.ts    # Turso client
+│   │   └── libsql-search-runtime.ts
+│   ├── middleware/
+│   │   └── rateLimit.ts
+│   └── index.ts        # Workers entry point
+├── scripts/            # Database scripts
+│   ├── init-db.ts      # Initialize database schema
+│   └── index-content.ts # Index markdown to database
 └── public/               # Static assets
 ```
 
@@ -124,22 +132,33 @@ GEMINI_API_KEY=your-key
 OPENAI_API_KEY=your-key
 ```
 
-### Astro Configuration
+### Vite Configuration
 ```typescript
-// astro.config.mjs
-export default defineConfig({
-  output: 'server',           // Hybrid rendering
-  adapter: node(),            // Node.js adapter for search API
-  integrations: [
-    react(),                  // React for interactive components
-    tailwindcss(),           // Tailwind CSS 4
-  ],
+// vite.config.ts
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
+    define: {
+      // Inject environment variables at build time
+      'process.env.TURSO_DB_URL': JSON.stringify(env.TURSO_DB_URL),
+      'process.env.TURSO_AUTH_TOKEN': JSON.stringify(env.TURSO_AUTH_TOKEN),
+    },
+    plugins: [
+      honox(),           // HonoX file-based routing
+      tailwindcss(),     // Tailwind CSS 4
+      devServer(),       // Dev server
+      build(),           // Production build
+    ],
+    resolve: {
+      conditions: ['workerd', 'worker', 'browser'], // Workers compatibility
+    },
 });
 ```
 
 ## Theme System
 
-Astro Vault includes 6 built-in themes that can be switched at runtime:
+Semantic Docs Hono includes 6 built-in themes that can be switched at runtime:
 
 - **Dark** (default): High contrast dark theme
 - **Light**: Clean light theme
@@ -148,15 +167,15 @@ Astro Vault includes 6 built-in themes that can be switched at runtime:
 - **Sunset**: Warm orange/red theme
 - **Purple**: Royal purple theme
 
-Themes are implemented with CSS variables and can be customized in `src/styles/global.css`.
+Themes are implemented with CSS variables and can be customized in `app/style.css`.
 
 ## Performance
 
 ### Build Performance
-- **Incremental builds**: Only changed files are rebuilt
-- **Parallel processing**: Multiple pages built concurrently
-- **Fast embeddings**: Local embeddings run on CPU/GPU
-- **Efficient bundling**: Astro's optimized build pipeline
+- **Fast builds**: Vite's optimized bundling
+- **Efficient bundling**: Tree-shaking and code splitting
+- **Workers-optimized**: Built specifically for Cloudflare Workers runtime
+- **Small bundle**: Minimal JavaScript, maximum performance
 
 ### Runtime Performance
 - **Static pages**: < 100ms load time
@@ -166,52 +185,51 @@ Themes are implemented with CSS variables and can be customized in `src/styles/g
 
 ## Deployment
 
-### Docker
+### Cloudflare Workers/Pages
 ```bash
-# Build with Turso credentials
-docker build \
-  --build-arg TURSO_DB_URL=libsql://your-db.turso.io \
-  --build-arg TURSO_AUTH_TOKEN=your-token \
-  -t astro-vault .
+# Build for production
+pnpm build
 
-# Run
-docker run -p 4321:4321 \
-  -e TURSO_DB_URL=libsql://your-db.turso.io \
-  -e TURSO_AUTH_TOKEN=your-token \
-  astro-vault
+# Deploy to Cloudflare
+pnpm deploy
 ```
 
-### Coolify
-1. Set build arguments: `TURSO_DB_URL`, `TURSO_AUTH_TOKEN`
-2. Set runtime environment variables (same values)
-3. Deploy - content is automatically indexed during build
+**Set environment variables in Cloudflare dashboard:**
+1. Go to your Workers/Pages project settings
+2. Navigate to Settings > Environment Variables
+3. Add the following variables:
+   - `TURSO_DB_URL`: Your Turso database URL
+   - `TURSO_AUTH_TOKEN`: Your Turso authentication token
+   - `EMBEDDING_PROVIDER`: Use `gemini` or `openai` for production (local embeddings don't work in Workers)
+   - `GEMINI_API_KEY` or `OPENAI_API_KEY`: If using cloud embeddings
 
-### Other Platforms
-- **Vercel**: Use `@astrojs/vercel` adapter
-- **Netlify**: Use `@astrojs/netlify` adapter
-- **Cloud Run**: Use Docker image
-- **Fly.io**: Use Docker image
+**Important:** Index your content before deploying:
+```bash
+pnpm db:init    # Initialize database schema
+pnpm index      # Index markdown content to Turso
+```
 
 ## Customization
 
 ### Adding Content
 1. Create markdown files in `content/` directory
 2. Add frontmatter with title and tags
-3. Deploy - content is indexed automatically
+3. Run `pnpm index` to index content to Turso
+4. Deploy to Cloudflare Workers
 
 ### Styling
-- Edit `src/styles/global.css` for global styles
+- Edit `app/style.css` for global styles
 - Use Tailwind utilities in components
 - Create new themes by adding CSS variables
 
 ### Components
-- React components in `src/components/`
-- Astro components for layouts and structure
+- Server components (Hono JSX) in `app/components/`
+- React islands in `app/islands/` for interactivity
 - Full TypeScript support with prop validation
 
 ## Links
 
-- **Live Demo**: [vault.llbbl.com](https://vault.llbbl.com)
-- **GitHub**: [llbbl/semantic-docs](https://github.com/llbbl/semantic-docs)
-- **Astro**: [astro.build](https://astro.build)
+- **GitHub**: [llbbl/semantic-docs-hono](https://github.com/llbbl/semantic-docs-hono)
+- **Original Astro Version**: [llbbl/semantic-docs](https://github.com/llbbl/semantic-docs)
+- **HonoX**: [github.com/honojs/honox](https://github.com/honojs/honox)
 - **Turso**: [turso.tech](https://turso.tech)

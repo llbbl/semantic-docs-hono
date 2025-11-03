@@ -18,12 +18,12 @@ This theme includes:
 
 ## Reference Implementation
 
-Check out the live reference implementation to see semantic-docs in action:
+This is the HonoX port of semantic-docs, optimized for Cloudflare Workers:
 
-- 🌐 **Live Demo**: [vault.llbbl.com](https://vault.llbbl.com/)
-- 💻 **Source Code**: [github.com/llbbl/astro-vault](https://github.com/llbbl/astro-vault)
+- 💻 **This Repository**: [github.com/llbbl/semantic-docs-hono](https://github.com/llbbl/semantic-docs-hono)
+- 🌐 **Original Astro Version**: [github.com/llbbl/semantic-docs](https://github.com/llbbl/semantic-docs)
 
-The reference implementation showcases all features and provides a complete example of how to structure your documentation.
+This implementation showcases all features with HonoX, React islands, and edge deployment on Cloudflare Workers.
 
 ## Getting Started
 

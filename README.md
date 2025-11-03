@@ -1,29 +1,39 @@
-# semantic-docs
+# semantic-docs-hono
 
-Documentation theme with semantic vector search.
+HonoX documentation theme with semantic vector search for Cloudflare Workers.
 
-A beautiful, dark-mode documentation theme powered by [libsql-search](https://github.com/llbbl/libsql-search) for semantic search capabilities. Perfect for technical documentation, knowledge bases, and content-heavy sites.
+A beautiful documentation theme powered by [HonoX](https://github.com/honojs/honox) and [libsql-search](https://github.com/llbbl/libsql-search) for semantic search capabilities. Optimized for deployment on Cloudflare Workers.
+
+> **Note**: This is a HonoX port of [semantic-docs](https://github.com/llbbl/semantic-docs). For the original Astro version, see the main repository.
 
 ## Features
 
-- 🎨 **Modern Dark UI** - Sleek design with OKLCH colors
-- 🔍 **Semantic Search** - AI-powered vector search in the header
+- 🎨 **Modern Dark UI** - Sleek design with Tailwind CSS
+- 🔍 **Semantic Search** - AI-powered vector search (React island component)
 - 📱 **Responsive** - Mobile-friendly with collapsible sidebar
 - 📑 **Auto TOC** - Table of contents generated from headings
-- 🚀 **Edge-Ready** - Optimized for Turso's global database
-- ⚡ **Fast** - Static generation with server-rendered search
+- 🚀 **Edge-Ready** - Built for Cloudflare Workers with HonoX
+- ⚡ **Fast** - SSR with Hono JSX and React islands for interactivity
 - 🎯 **Type-Safe** - Full TypeScript support
+- 🌐 **Turso Database** - Distributed SQLite with vector search
+
+## Architecture
+
+- **Framework**: [HonoX](https://github.com/honojs/honox) - File-based routing meta-framework for Hono
+- **Runtime**: Cloudflare Workers
+- **Database**: Turso (libSQL) with vector search via libsql-search
+- **Styling**: Tailwind CSS 4 (Vite plugin)
+- **Interactivity**: React islands (Search, ThemeSwitcher, DocsToc)
+- **SSR**: Hono JSX for server-side rendering
 
 ## Quick Start
 
-### 1. Clone or Use as Template
+### 1. Clone Repository
 
 ```bash
-git clone https://github.com/llbbl/semantic-docs.git
-cd semantic-docs
+git clone https://github.com/llbbl/semantic-docs-hono.git
+cd semantic-docs-hono
 ```
-
-Or use as a template on GitHub.
 
 ### 2. Install Dependencies
 
@@ -44,7 +54,7 @@ Edit `.env`:
 ```env
 TURSO_DB_URL=libsql://your-database.turso.io
 TURSO_AUTH_TOKEN=your-auth-token
-EMBEDDING_PROVIDER=local
+EMBEDDING_PROVIDER=local  # or 'gemini' or 'openai'
 ```
 
 **Get Turso credentials:**
@@ -88,221 +98,202 @@ Your content here...
 ### 5. Index Content
 
 ```bash
-# Initialize database and index content to Turso
+# Initialize database schema
 pnpm db:init
-pnpm index
 
-# Or use local database without Turso (for testing)
-pnpm db:init:local
-pnpm index:local
+# Index content to Turso
+pnpm index
 ```
 
-This will:
-- Scan your markdown files
-- Generate embeddings (using local model by default)
-- Store everything in Turso (or local.db with `:local` commands)
-
-### 6. Start Development
+### 6. Run Development Server
 
 ```bash
 pnpm dev
 ```
 
-Visit `http://localhost:4321` to see your docs!
-
-## Customization
-
-### Change Site Title
-
-Edit `src/components/DocsHeader.astro`:
-
-```astro
-<span class="font-sans">Your Site Name</span>
-```
-
-And `src/layouts/DocsLayout.astro`:
-
-```astro
-const { title = "Your Site Name", description = "Your description" } = Astro.props;
-```
-
-### Customize Colors
-
-Edit `src/styles/global.css` to change the color scheme. The theme uses OKLCH colors for smooth gradients and perceptual uniformity.
-
-### Change Embedding Provider
-
-**Use Gemini** (free tier: 1,500 requests/day):
-
-```env
-EMBEDDING_PROVIDER=gemini
-GEMINI_API_KEY=your-key
-```
-
-**Use OpenAI** (paid):
-
-```env
-EMBEDDING_PROVIDER=openai
-OPENAI_API_KEY=your-key
-```
+Visit `http://localhost:5174` to see your docs!
 
 ## Project Structure
 
 ```
-semantic-docs/
-├── src/
-│   ├── components/
-│   │   ├── DocsHeader.astro    # Header with search
-│   │   ├── DocsSidebar.astro   # Navigation sidebar
-│   │   ├── DocsToc.tsx         # Table of contents
-│   │   └── Search.tsx          # Search component
-│   ├── layouts/
-│   │   └── DocsLayout.astro    # Main layout
+semantic-docs-hono/
+├── app/                      # HonoX application
+│   ├── routes/              # File-based routes
+│   │   ├── index.tsx        # Home page
+│   │   ├── content/         # Article routes
+│   │   │   └── [...slug].tsx  # Catch-all article route
+│   │   └── api/             # API routes
+│   │       └── search.ts    # Search API endpoint
+│   ├── components/          # Hono JSX components
+│   │   ├── DocsHeader.tsx
+│   │   ├── DocsSidebar.tsx
+│   │   └── ui/              # shadcn-style components
+│   ├── islands/             # React islands (client-side)
+│   │   ├── Search.tsx       # Search dialog
+│   │   ├── ThemeSwitcher.tsx
+│   │   └── DocsToc.tsx      # Table of contents
+│   ├── _renderer.tsx        # HonoX layout renderer
+│   ├── client.tsx           # Client-side hydration
+│   ├── server.ts            # Hono server entry
+│   └── style.css            # Tailwind styles
+├── src/                     # Core logic
 │   ├── lib/
-│   │   └── turso.ts            # Database client
-│   ├── pages/
-│   │   ├── api/
-│   │   │   └── search.json.ts  # Search API endpoint
-│   │   ├── content/
-│   │   │   └── [...slug].astro # Article pages
-│   │   └── index.astro         # Home page
-│   └── styles/
-│       └── global.css          # Global styles
-├── scripts/
-│   └── index-content.js        # Indexing script
-├── content/                    # Your markdown files
-├── astro.config.mjs
-├── package.json
-└── .env                        # Your credentials
+│   │   ├── turso.ts         # Turso client (@libsql/client/web)
+│   │   ├── search-wrapper.ts
+│   │   └── libsql-search-runtime.ts  # Standalone search implementation
+│   ├── middleware/
+│   │   └── rateLimit.ts     # API rate limiting
+│   └── index.ts             # Workers entry point
+├── content/                 # Markdown content
+├── scripts/                 # Database scripts
+│   ├── init-db.ts
+│   └── index-content.ts
+├── vite.config.ts
+├── wrangler.toml            # Cloudflare Workers config
+└── package.json
+```
+
+## Key Differences from Astro Version
+
+### Framework
+- **Astro** → **HonoX**: File-based routing with Hono
+- Server adapter changes from `@astrojs/node` to Cloudflare Workers
+
+### Rendering
+- **Astro components** → **Hono JSX**: Server-side rendering
+- React components → **React islands**: Client-side hydration for interactivity
+- Manual HTML wrapper with `c.html()` instead of Astro layouts
+
+### Routing
+- File naming: `[...slug].tsx` for catch-all routes (HonoX convention)
+- Routes wrapped with `createRoute()` from `honox/factory`
+
+### Database Client
+- Using `@libsql/client/web` import for Workers compatibility
+- Custom search runtime (`libsql-search-runtime.ts`) to avoid CommonJS dependencies
+
+### Environment Variables
+- Loaded via Vite's `loadEnv()` and injected with `define` in `vite.config.ts`
+- Access via `process.env` (replaced at build time)
+
+## Commands
+
+```bash
+# Development
+pnpm dev              # Start dev server (http://localhost:5174)
+pnpm build            # Build for production
+pnpm preview          # Preview production build
+
+# Database
+pnpm db:init          # Initialize Turso database schema
+pnpm index            # Index markdown content to Turso
+
+# Testing & Linting
+pnpm test             # Run tests with Vitest
+pnpm test:ui          # Run tests with UI
+pnpm test:coverage    # Generate coverage report
+pnpm lint             # Check code with Biome
+pnpm lint:fix         # Auto-fix linting issues
+pnpm format           # Format all files
+
+# Deployment
+pnpm deploy           # Deploy to Cloudflare Pages (via wrangler)
 ```
 
 ## Deployment
 
-> **Note**: Cloudflare Workers/Pages deployment support is currently in development on the `cloudflare-workers` branch.
+### Cloudflare Workers/Pages
 
-### Container-Based Platforms (Recommended)
-
-This project is designed to run on platforms that support Docker containers, such as:
-
-- [Railway](https://railway.app)
-- [Render](https://render.com)
-- [Fly.io](https://fly.io)
-- Google Cloud Run
-- AWS ECS/Fargate
-- Azure Container Apps
-- Coolify
+The project includes a `wrangler.toml` configuration for Cloudflare deployment:
 
 ```bash
-# Build with Node.js adapter (default)
-pnpm build
-
-# The built application runs on Node.js and can be containerized
-# Set environment variables in your platform's dashboard
-```
-
-**Important:** Always run `pnpm index` before deploying to ensure content is indexed.
-
-### Vercel / Netlify
-
-> **Note**: These platforms have not been tested and cannot be recommended at this time.
-
-```bash
-# Build with Node.js adapter (default)
+# Build
 pnpm build
 
 # Deploy
-vercel
-# or
-netlify deploy --prod
-
-# Add environment variables in platform dashboard
+pnpm deploy
 ```
 
-## Content Organization
+Set environment variables in your Cloudflare dashboard:
+- `TURSO_DB_URL`
+- `TURSO_AUTH_TOKEN`
+- `EMBEDDING_PROVIDER` (optional, defaults to 'local')
 
-The theme automatically organizes content by folder:
+### Environment Variables
 
-```
-content/
-├── getting-started/
-│   ├── intro.md
-│   └── installation.md
-├── guides/
-│   ├── configuration.md
-│   └── deployment.md
-└── reference/
-    └── api.md
-```
+Required:
+- `TURSO_DB_URL`: Your Turso database URL (libsql://...)
+- `TURSO_AUTH_TOKEN`: Your Turso authentication token
 
-Folders become collapsible sections in the sidebar.
+Optional:
+- `EMBEDDING_PROVIDER`: `local` (default), `gemini`, or `openai`
+- `GEMINI_API_KEY`: If using Gemini embeddings
+- `OPENAI_API_KEY`: If using OpenAI embeddings
 
-## Search
+## Search Functionality
 
-The search bar in the header provides semantic search:
+The semantic search is powered by vector embeddings stored in Turso:
 
-- **Semantic matching**: Finds content by meaning, not just keywords
-- **Instant results**: Real-time as you type
-- **Smart ranking**: Most relevant results first
-- **Tag display**: Shows article tags in results
+1. **Indexing**: Markdown content is converted to 768-dimension vectors
+2. **Query**: User searches are converted to vectors
+3. **Matching**: Vector similarity finds relevant articles
+4. **Results**: Grouped by folder, sorted by relevance
 
-Try searching for concepts rather than exact phrases!
+**Embedding Providers:**
+- `local`: @xenova/transformers (Xenova/all-MiniLM-L6-v2) - runs in browser/Workers
+- `gemini`: Google Gemini API
+- `openai`: OpenAI API
 
-## Build for Production
+> **Note**: Local embeddings work in development but are externalized for Workers compatibility. For production Workers deployment, use `gemini` or `openai`.
 
-```bash
-# Index content
-pnpm index
+## Known Limitations
 
-# Build site
-pnpm build
+### Search in Workers
+The `@xenova/transformers` package is externalized for Workers compatibility. The search dropdown will work in development but may need cloud embeddings (`gemini` or `openai`) for production Workers deployment.
 
-# Preview
-pnpm preview
-```
+### Islands Hydration
+React islands (Search, ThemeSwitcher, DocsToc) require client-side hydration via `app/client.tsx`. The script is included in the HTML but may need further configuration for optimal Workers deployment.
 
-## Troubleshooting
+## Development Notes
 
-### Search not working
+### Hono JSX vs React
+- Server components use Hono JSX (imported from `hono/jsx`)
+- Client islands use React (imported from `react`)
+- `tsconfig.json` uses `"jsxImportSource": "hono/jsx"` by default
 
-1. Check `.env` file has correct credentials
-2. Ensure `output: 'server'` in `astro.config.mjs`
-3. Verify content is indexed: run `pnpm index`
+### File Extensions
+- `.tsx` files in `app/routes/` and `app/components/` use Hono JSX
+- `.tsx` files in `app/islands/` use React
+- `app/client.tsx` handles island hydration
 
-### Content not showing
+### CSS & Styling
+- Tailwind CSS 4 via `@tailwindcss/vite` plugin
+- CSS variables in `app/style.css` for theming
+- Multiple theme support (dark, light, ocean, forest, sunset, purple)
 
-1. Run `pnpm index` to index your markdown files
-2. Check content is in `./content` directory
-3. Verify Turso database has data
+## Contributing
 
-### Local embedding model slow
+Contributions welcome! This is a community-driven project.
 
-First run downloads ~50MB model. Subsequent runs use cache.
-
-Use Gemini for faster embeddings:
-
-```env
-EMBEDDING_PROVIDER=gemini
-GEMINI_API_KEY=your-key
-```
-
-## Tech Stack
-
-- **Framework**: [Astro](https://astro.build) 5
-- **Search**: [libsql-search](https://github.com/llbbl/libsql-search)
-- **Database**: [Turso](https://turso.tech) (libSQL)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com) 4
-- **UI**: React islands for interactivity
-- **Embeddings**: Xenova, Gemini, or OpenAI
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linter
+5. Submit a pull request
 
 ## License
 
-MIT
-
-## Support
-
-- [Issues](https://github.com/llbbl/semantic-docs/issues)
-- [Discussions](https://github.com/llbbl/semantic-docs/discussions)
+MIT License - see LICENSE file for details
 
 ## Credits
 
-Built with [libsql-search](https://github.com/llbbl/libsql-search).
+- Built with [HonoX](https://github.com/honojs/honox)
+- Powered by [libsql-search](https://github.com/llbbl/libsql-search)
+- Database: [Turso](https://turso.tech)
+- Inspired by [semantic-docs](https://github.com/llbbl/semantic-docs) (Astro version)
+
+## Support
+
+- GitHub Issues: [Report bugs or request features](https://github.com/llbbl/semantic-docs-hono/issues)
+- Discussions: Share ideas and ask questions
+- Documentation: Check the `/content` folder for examples

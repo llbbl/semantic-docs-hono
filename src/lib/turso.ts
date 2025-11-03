@@ -1,27 +1,36 @@
 /**
  * Turso/LibSQL client wrapper using libsql-search
  * Falls back to local SQLite file when Turso credentials aren't available
+ * Uses @libsql/client/web for Cloudflare Workers compatibility
  */
 
-import { type Client, createClient } from '@libsql/client';
+import { type Client, createClient } from '@libsql/client/web';
 import { logger } from '@logan/logger';
 
 let client: Client | null = null;
 
 export function getTursoClient(): Client {
   if (!client) {
-    const url = import.meta.env.TURSO_DB_URL || process.env.TURSO_DB_URL;
-    const authToken =
-      import.meta.env.TURSO_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN;
+    // In Vite, process.env is available server-side, but we need to ensure .env is loaded
+    const url = process.env.TURSO_DB_URL;
+    const authToken = process.env.TURSO_AUTH_TOKEN;
 
     if (url && authToken) {
-      // Use Turso remote database
+      // Use Turso remote database (HTTP only for Workers compatibility)
       logger.info(`Using Turso database: ${url}`);
-      client = createClient({ url, authToken });
+      client = createClient({
+        url,
+        authToken,
+        // Force HTTP transport (no WebSockets)
+        intMode: 'number',
+      });
     } else {
-      // Fall back to local libSQL file (for CI/development)
-      logger.warn('Turso credentials not found, using local libSQL database');
-      client = createClient({ url: 'file:local.db' });
+      // Development without Turso: throw error with helpful message
+      throw new Error(
+        `Turso credentials required. Set TURSO_DB_URL and TURSO_AUTH_TOKEN in .env file. ` +
+          `Local file:// URLs are not supported in Workers/Vite SSR. ` +
+          `Found: url=${url}, token=${authToken ? 'present' : 'missing'}`,
+      );
     }
   }
 
@@ -34,4 +43,4 @@ export {
   getArticleBySlug,
   getArticlesByFolder,
   getFolders,
-} from '@logan/libsql-search';
+} from './search-wrapper';
