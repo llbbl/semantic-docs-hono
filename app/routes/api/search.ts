@@ -1,17 +1,19 @@
 /**
- * Vector Search API Endpoint
- * Uses libsql-search for semantic search
+ * Semantic Search API Endpoint
+ * Uses Cloudflare AI Search with R2 content
  */
 
 import { Hono } from 'hono';
-import { search } from '@/lib/libsql-search-runtime.ts';
 import { logger } from '@/lib/logger.ts';
-import { getTursoClient } from '@/lib/turso.ts';
+import type { Env } from '../../types';
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 // Note: Rate limiting should be configured via Cloudflare Dashboard
 // See docs/RATE_LIMITING.md for setup instructions
+
+// AI Search index name (configured in Cloudflare dashboard)
+const AI_SEARCH_INDEX = 'semantic-docs';
 
 // POST endpoint for search
 app.post('/', async (c) => {
@@ -34,25 +36,22 @@ app.post('/', async (c) => {
       );
     }
 
-    // Limit max results to prevent excessive database queries
+    // Limit max results
     const sanitizedLimit = Math.min(Math.max(1, limit), 20);
 
-    const client = await getTursoClient();
-
-    // Get embedding provider from environment
-    const embeddingProvider =
-      (process.env.EMBEDDING_PROVIDER as 'local' | 'gemini' | 'openai') ||
-      'local';
-
-    // Perform vector search
-    const results = await search({
-      client,
+    // Perform semantic search using Cloudflare AI Search
+    const searchResponse = await c.env.AI.autorag(AI_SEARCH_INDEX).search({
       query,
-      limit: sanitizedLimit,
-      embeddingOptions: {
-        provider: embeddingProvider,
-      },
+      max_num_results: sanitizedLimit,
+      rerank: true, // Enable reranking for better relevance
     });
+
+    // Transform results to match previous API format
+    const results = searchResponse.results.map((result) => ({
+      content: result.content,
+      score: result.score,
+      metadata: result.metadata,
+    }));
 
     return c.json({
       results,

@@ -1,12 +1,18 @@
 import { createRoute } from 'honox/factory';
-import { getAllArticles } from '@/lib/search-wrapper';
-import { getTursoClient } from '@/lib/turso';
 import DocsHeader from '~/components/DocsHeader';
 import DocsSidebar from '~/components/DocsSidebar';
+import type { Env, Manifest } from '../types';
 
 export default createRoute(async (c) => {
-  const client = await getTursoClient();
-  const allArticles = await getAllArticles(client);
+  const env = c.env as Env;
+
+  // Fetch manifest from R2
+  const manifestObject = await env.CONTENT.get('manifest.json');
+  if (!manifestObject) {
+    return c.text('Manifest not found', 500);
+  }
+
+  const manifest: Manifest = await manifestObject.json();
   const currentPath = c.req.path;
 
   return c.html(
@@ -34,7 +40,7 @@ export default createRoute(async (c) => {
           <DocsHeader />
 
           <div className="flex">
-            <DocsSidebar articles={allArticles} currentPath={currentPath} />
+            <DocsSidebar folders={manifest.folders} currentPath={currentPath} />
 
             <main className="flex-1 lg:pl-64 xl:pr-64">
               <div className="mx-auto max-w-4xl px-6 py-8 lg:px-8">

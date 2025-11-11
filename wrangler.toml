@@ -1,23 +1,21 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "hono"
+name = "semantic-docs-hono"
 compatibility_date = "2025-01-03"
 compatibility_flags = ["nodejs_compat"]
 main = "dist/index.js"
 keep_vars = true
 
-# Build configuration
-[build]
-command = "pnpm build"
+# R2 Bucket for content storage
+[[r2_buckets]]
+binding = "CONTENT"
+bucket_name = "hono"
+
+# AI Search binding for semantic search
+[ai]
+binding = "AI"
 
 # Rules for special file types
 [[rules]]
 type = "CompiledWasm"
 globs = ["**/*.wasm"]
 fallthrough = true
-
-# Environment variables (set via dashboard or `wrangler secret put`)
-[vars]
-# Required:
-# - TURSO_DB_URL (set as secret)
-# - TURSO_AUTH_TOKEN (set as secret)
-# - EMBEDDING_PROVIDER = "gemini" or "openai" (local not supported in Workers)

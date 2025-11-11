@@ -1,9 +1,8 @@
 import { createRoute } from 'honox/factory';
 import { marked } from 'marked';
-import { getAllArticles, getArticleBySlug } from '@/lib/search-wrapper';
-import { getTursoClient } from '@/lib/turso';
 import DocsHeader from '~/components/DocsHeader';
 import DocsSidebar from '~/components/DocsSidebar';
+import type { Env, Manifest } from '../../types';
 
 // Configure marked to add IDs to headings and handle external links
 marked.use({
@@ -31,7 +30,49 @@ marked.use({
   },
 });
 
+/**
+ * Parse frontmatter from markdown content
+ */
+function parseFrontmatter(content: string): {
+  title: string;
+  tags: string[];
+  content: string;
+} {
+  const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+  const match = content.match(frontmatterRegex);
+
+  if (!match) {
+    return { title: 'Untitled', tags: [], content };
+  }
+
+  const [, frontmatter, body] = match;
+  const lines = frontmatter.split('\n');
+  let title = 'Untitled';
+  let tags: string[] = [];
+
+  for (const line of lines) {
+    const [key, ...valueParts] = line.split(':');
+    const value = valueParts.join(':').trim();
+
+    if (key === 'title') {
+      title = value.replace(/^['"]|['"]$/g, '');
+    } else if (key === 'tags') {
+      const tagsMatch = value.match(/\[(.*?)\]/);
+      if (tagsMatch) {
+        tags = tagsMatch[1]
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean);
+      }
+    }
+  }
+
+  return { title, tags, content: body };
+}
+
 export default createRoute(async (c) => {
+  const env = c.env as Env;
+
   // Extract slug from full path: /content/folder/article -> folder/article
   const fullPath = c.req.path;
   const slug = fullPath.replace('/content/', '');
@@ -40,21 +81,25 @@ export default createRoute(async (c) => {
     return c.redirect('/');
   }
 
-  const client = await getTursoClient();
-  const article = await getArticleBySlug(client, slug);
-
-  if (!article) {
+  // Fetch markdown file from R2
+  const mdFile = await env.CONTENT.get(`${slug}.md`);
+  if (!mdFile) {
     return c.redirect('/404');
   }
 
+  const rawContent = await mdFile.text();
+  const { title, tags, content } = parseFrontmatter(rawContent);
+
   // Convert markdown to HTML
-  const htmlContent = await marked(article.content);
+  const htmlContent = await marked(content);
 
-  // Parse tags
-  const tags = article.tags;
+  // Fetch manifest for sidebar
+  const manifestObject = await env.CONTENT.get('manifest.json');
+  if (!manifestObject) {
+    return c.text('Manifest not found', 500);
+  }
 
-  // Get all articles for sidebar
-  const allArticles = await getAllArticles(client);
+  const manifest: Manifest = await manifestObject.json();
   const currentPath = c.req.path;
 
   return c.html(
@@ -63,8 +108,8 @@ export default createRoute(async (c) => {
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <title>{article.title}</title>
-        <meta name="description" content={article.title} />
+        <title>{title}</title>
+        <meta name="description" content={title} />
         <link rel="stylesheet" href="/app/style.css" />
         <script
           dangerouslySetInnerHTML={{
@@ -83,14 +128,14 @@ export default createRoute(async (c) => {
           <DocsHeader />
 
           <div className="flex">
-            <DocsSidebar articles={allArticles} currentPath={currentPath} />
+            <DocsSidebar folders={manifest.folders} currentPath={currentPath} />
 
             <main className="flex-1 lg:pl-64 xl:pr-64 min-w-0 relative z-10">
               <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
                 <article className="prose prose-neutral dark:prose-invert max-w-none overflow-x-auto relative">
                   <header className="mb-8 pb-6 border-b border-border">
                     <h1 className="text-4xl font-bold tracking-tight text-balance mb-4">
-                      {article.title}
+                      {title}
                     </h1>
                     {tags.length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -110,20 +155,6 @@ export default createRoute(async (c) => {
                     className="article-content"
                     dangerouslySetInnerHTML={{ __html: htmlContent }}
                   />
-
-                  <footer className="mt-12 pt-6 border-t border-border">
-                    <p className="text-sm text-muted-foreground">
-                      Last updated:{' '}
-                      {new Date(article.updated_at).toLocaleDateString(
-                        'en-US',
-                        {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        },
-                      )}
-                    </p>
-                  </footer>
                 </article>
               </div>
             </main>

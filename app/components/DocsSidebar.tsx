@@ -1,45 +1,17 @@
 /**
  * Docs Sidebar Component
- * Collapsible navigation populated from Turso database
+ * Collapsible navigation populated from R2 manifest
  */
 
 import type { FC } from 'hono/jsx';
-
-interface Article {
-  id: number;
-  title: string;
-  slug: string;
-  folder: string;
-}
+import type { Folder } from '../types';
 
 interface DocsSidebarProps {
-  articles: Article[];
+  folders: Folder[];
   currentPath: string;
 }
 
-// Format folder names for display
-function formatFolderName(folder: string): string {
-  if (folder === 'root') return 'Documentation';
-  return folder
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-const DocsSidebar: FC<DocsSidebarProps> = ({ articles, currentPath }) => {
-  // Group articles by folder
-  const articlesByFolder = articles.reduce(
-    (acc, article) => {
-      const folder = article.folder || 'root';
-      if (!acc[folder]) {
-        acc[folder] = [];
-      }
-      acc[folder].push(article);
-      return acc;
-    },
-    {} as Record<string, Article[]>,
-  );
-
+const DocsSidebar: FC<DocsSidebarProps> = ({ folders, currentPath }) => {
   return (
     <>
       <aside
@@ -48,55 +20,56 @@ const DocsSidebar: FC<DocsSidebarProps> = ({ articles, currentPath }) => {
       >
         <div className="py-6 px-6">
           <nav className="space-y-2">
-            {Object.entries(articlesByFolder).map(
-              ([folder, folderArticles]) => (
-                <div key={folder} className="mb-4" data-folder={folder}>
-                  <button
-                    type="button"
-                    data-folder-button={folder}
-                    className="flex w-full items-center justify-between py-2 text-sm font-medium text-sidebar-foreground hover:text-sidebar-foreground/80 transition-colors"
+            {folders.map((folder) => (
+              <div key={folder.slug} className="mb-4" data-folder={folder.slug}>
+                <button
+                  type="button"
+                  data-folder-button={folder.slug}
+                  className="flex w-full items-center justify-between py-2 text-sm font-medium text-sidebar-foreground hover:text-sidebar-foreground/80 transition-colors"
+                >
+                  {folder.name}
+                  <svg
+                    data-folder-icon={folder.slug}
+                    className="h-4 w-4 transition-transform"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                   >
-                    {formatFolderName(folder)}
-                    <svg
-                      data-folder-icon={folder}
-                      className="h-4 w-4 transition-transform"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                  <div data-folder-content={folder} className="mt-2 space-y-1">
-                    {folderArticles.map((article) => {
-                      const href = `/content/${article.slug}`;
-                      const isActive =
-                        currentPath === href ||
-                        currentPath.startsWith(`${href}/`);
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                <div
+                  data-folder-content={folder.slug}
+                  className="mt-2 space-y-1"
+                >
+                  {folder.articles.map((article) => {
+                    const href = `/content/${article.slug}`;
+                    const isActive =
+                      currentPath === href ||
+                      currentPath.startsWith(`${href}/`);
 
-                      return (
-                        <a
-                          key={article.id}
-                          href={href}
-                          className={`block py-2 text-sm transition-colors pl-4 border-l-2 ${
-                            isActive
-                              ? 'text-sidebar-foreground border-sidebar-primary font-medium'
-                              : 'text-muted-foreground border-transparent hover:text-sidebar-foreground hover:border-muted-foreground/30'
-                          }`}
-                        >
-                          {article.title}
-                        </a>
-                      );
-                    })}
-                  </div>
+                    return (
+                      <a
+                        key={article.slug}
+                        href={href}
+                        className={`block py-2 text-sm transition-colors pl-4 border-l-2 ${
+                          isActive
+                            ? 'text-sidebar-foreground border-sidebar-primary font-medium'
+                            : 'text-muted-foreground border-transparent hover:text-sidebar-foreground hover:border-muted-foreground/30'
+                        }`}
+                      >
+                        {article.title}
+                      </a>
+                    );
+                  })}
                 </div>
-              ),
-            )}
+              </div>
+            ))}
           </nav>
         </div>
       </aside>

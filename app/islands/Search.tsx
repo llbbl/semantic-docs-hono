@@ -15,12 +15,14 @@ import {
 } from './ui/command';
 
 interface SearchResult {
-  id: number;
-  title: string;
-  slug: string;
-  folder: string;
-  tags: string[];
-  distance: number;
+  content: string;
+  score: number;
+  metadata?: {
+    title?: string;
+    slug?: string;
+    folder?: string;
+    tags?: string[];
+  };
 }
 
 interface SearchProps {
@@ -129,10 +131,11 @@ export default function Search({
   // Group results by folder
   const groupedResults = results.reduce(
     (acc, result) => {
-      if (!acc[result.folder]) {
-        acc[result.folder] = [];
+      const folder = result.metadata?.folder || 'Other';
+      if (!acc[folder]) {
+        acc[folder] = [];
       }
-      acc[result.folder].push(result);
+      acc[folder].push(result);
       return acc;
     },
     {} as Record<string, SearchResult[]>,
@@ -203,32 +206,40 @@ export default function Search({
             Object.entries(groupedResults).map(([folder, folderResults]) => (
               // @ts-expect-error - React 19 type compatibility with cmdk
               <CommandGroup key={folder} heading={folder.toUpperCase()}>
-                {folderResults.map((result) => (
-                  // @ts-expect-error - React 19 type compatibility with cmdk
-                  <CommandItem
-                    key={result.id}
-                    value={result.title}
-                    onSelect={() => {
-                      window.location.href = `/content/${result.slug}`;
-                      setOpen(false);
-                    }}
-                    className="flex flex-col items-start gap-1 cursor-pointer"
-                  >
-                    <div className="font-medium text-sm">{result.title}</div>
-                    {result.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {result.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px]"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </CommandItem>
-                ))}
+                {folderResults.map((result) => {
+                  const title = result.metadata?.title || 'Untitled';
+                  const slug = result.metadata?.slug || '';
+                  const tags = result.metadata?.tags || [];
+
+                  return (
+                    // @ts-expect-error - React 19 type compatibility with cmdk
+                    <CommandItem
+                      key={slug || title}
+                      value={title}
+                      onSelect={() => {
+                        if (slug) {
+                          window.location.href = `/content/${slug}`;
+                        }
+                        setOpen(false);
+                      }}
+                      className="flex flex-col items-start gap-1 cursor-pointer"
+                    >
+                      <div className="font-medium text-sm">{title}</div>
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-[10px]"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ))}
         </CommandList>

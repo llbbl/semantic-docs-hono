@@ -20,11 +20,6 @@ export default defineConfig({
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
       '**/.old-astro-backup/**',
     ],
-    server: {
-      deps: {
-        inline: ['@libsql/client'],
-      },
-    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

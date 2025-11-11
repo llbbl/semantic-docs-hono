@@ -1,13 +1,10 @@
-/// <reference path="../.astro/types.d.ts" />
-/// <reference types="astro/client" />
+/// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly TURSO_DB_URL?: string;
-  readonly TURSO_AUTH_TOKEN?: string;
-  readonly EMBEDDING_PROVIDER?: string;
-  readonly GEMINI_API_KEY?: string;
-  readonly OPENAI_API_KEY?: string;
-}
+/**
+ * Environment variables available during build
+ * Note: These are replaced at build time by Vite
+ */
+type ImportMetaEnv = Record<string, never>;
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
