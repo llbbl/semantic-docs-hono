@@ -12,8 +12,16 @@ const app = new Hono<{ Bindings: Env }>();
 // Note: Rate limiting should be configured via Cloudflare Dashboard
 // See docs/RATE_LIMITING.md for setup instructions
 
-// POST endpoint for search
-app.post('/', async (c) => {
+// Search endpoint - only accepts POST
+app.all('/', async (c) => {
+  // Only allow POST requests
+  if (c.req.method !== 'POST') {
+    return c.json(
+      { error: 'Method not allowed', message: 'Use POST method for search' },
+      405,
+    );
+  }
+
   try {
     const body = await c.req.json();
     const { query, limit = 10 } = body;
@@ -71,18 +79,6 @@ app.post('/', async (c) => {
       500,
     );
   }
-});
-
-// Handle GET requests with method not allowed
-app.all('/', async (c) => {
-  if (c.req.method !== 'POST') {
-    return c.json(
-      { error: 'Method not allowed', message: 'Use POST method for search' },
-      405,
-    );
-  }
-  // This shouldn't be reached, but just in case
-  return c.json({ error: 'Invalid request' }, 400);
 });
 
 export default app;
