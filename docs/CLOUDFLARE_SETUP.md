@@ -54,24 +54,49 @@ The AI Search index will automatically:
 
 **Important:** Wait for initial indexing to complete before testing search (check index status in dashboard).
 
-## 3. Configure GitHub Secrets
+## 3. Configure GitHub Secrets and Variables
 
-Add these secrets to your GitHub repository for the deployment workflow.
+Add these to your GitHub repository for the deployment workflow.
 
-### Required Secrets:
+### Repository Secrets (Required)
 
-Go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+**These are sensitive credentials that must be kept secret.**
+
+Go to **Settings** → **Secrets and variables** → **Actions** → **Secrets** tab → **New repository secret**
 
 | Secret Name | Description | How to Get |
 |------------|-------------|------------|
 | `CLOUDFLARE_API_TOKEN` | API token for Wrangler | [Create token](https://dash.cloudflare.com/profile/api-tokens) with "Edit Cloudflare Workers" permissions |
 | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID | Found in dashboard URL or Workers overview page |
 
-### Optional Secrets:
+### Repository Variables (Optional)
 
-| Secret Name | Description | Default |
+**These are non-sensitive configuration values.**
+
+Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**
+
+| Variable Name | Description | Default |
 |------------|-------------|---------|
 | `R2_BUCKET_NAME` | Custom R2 bucket name | `hono` |
+
+**Note:** Only add `R2_BUCKET_NAME` if you're using a different bucket name than `hono`. If omitted, the workflow defaults to `hono`.
+
+### Cloudflare Worker Variables (Required)
+
+**These are configured in the Cloudflare Dashboard after first deployment.**
+
+After deploying your Worker, you **must** set the AI Search index name:
+
+1. Go to **Workers & Pages** → `semantic-docs-hono` → **Settings** → **Variables and Secrets**
+2. Under **Environment Variables**, click **Add variable**:
+   - **Variable name**: `AI_SEARCH_INDEX`
+   - **Value**: Your AI Search index name (e.g., `semantic-docs`)
+   - **Type**: Choose either:
+     - **Text** (if you don't consider the name sensitive)
+     - **Secret** (if you want to keep it private in a public repo)
+3. Click **Deploy** to apply changes
+
+**Important:** The Worker will fail if `AI_SEARCH_INDEX` is not set. Set this immediately after first deployment.
 
 ### Creating API Token:
 
@@ -111,11 +136,20 @@ The workflow will:
 3. Build the Worker
 4. Deploy to Cloudflare Workers
 
+### Set Worker Variables (Important!)
+
+**After the first deployment completes**, you must set the required environment variable:
+
+1. Go to **Workers & Pages** → `semantic-docs-hono` → **Settings** → **Variables and Secrets**
+2. Add `AI_SEARCH_INDEX` variable (see step 3 above)
+3. Click **Deploy** to apply
+
 ### Verify Deployment:
 
 1. Check GitHub Actions tab for workflow status
 2. Once deployed, visit your Worker URL (shown in Actions logs)
 3. Test search API: `POST https://your-worker.workers.dev/api/search` with `{"query": "test"}`
+4. If search fails, verify `AI_SEARCH_INDEX` is set in Worker settings
 
 ## 6. Configure Rate Limiting (Optional but Recommended)
 

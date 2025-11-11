@@ -37,6 +37,9 @@ export interface Env {
       }>;
     };
   };
+
+  // Environment variables
+  AI_SEARCH_INDEX: string;
 }
 
 /**

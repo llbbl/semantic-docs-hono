@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "semantic-docs-hono"
+name = "hono"
 compatibility_date = "2025-01-03"
 compatibility_flags = ["nodejs_compat"]
 main = "dist/index.js"
@@ -13,6 +13,10 @@ bucket_name = "hono"
 # AI Search binding for semantic search
 [ai]
 binding = "AI"
+
+# Variables and secrets are set via Cloudflare Dashboard:
+# Workers & Pages → Your worker → Settings → Variables and Secrets
+# Required: AI_SEARCH_INDEX (your AI Search index name)
 
 # Rules for special file types
 [[rules]]

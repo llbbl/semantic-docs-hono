@@ -12,9 +12,6 @@ const app = new Hono<{ Bindings: Env }>();
 // Note: Rate limiting should be configured via Cloudflare Dashboard
 // See docs/RATE_LIMITING.md for setup instructions
 
-// AI Search index name (configured in Cloudflare dashboard)
-const AI_SEARCH_INDEX = 'semantic-docs';
-
 // POST endpoint for search
 app.post('/', async (c) => {
   try {
@@ -39,8 +36,11 @@ app.post('/', async (c) => {
     // Limit max results
     const sanitizedLimit = Math.min(Math.max(1, limit), 20);
 
+    // Get AI Search index name from environment
+    const aiSearchIndex = c.env.AI_SEARCH_INDEX || 'semantic-docs';
+
     // Perform semantic search using Cloudflare AI Search
-    const searchResponse = await c.env.AI.autorag(AI_SEARCH_INDEX).search({
+    const searchResponse = await c.env.AI.autorag(aiSearchIndex).search({
       query,
       max_num_results: sanitizedLimit,
       rerank: true, // Enable reranking for better relevance
