@@ -17,6 +17,7 @@ A beautiful documentation theme powered by [HonoX](https://github.com/honojs/hon
 - ⚡ **Fast** - SSR with Hono JSX and React islands for interactivity
 - 🎯 **Type-Safe** - Full TypeScript support
 - 🔄 **Auto Deploy** - GitHub Actions deploys on push to main
+- 🤖 **AI-Powered Search** - Cloudflare AI Search with vector embeddings
 
 ## Architecture
 
@@ -27,6 +28,35 @@ A beautiful documentation theme powered by [HonoX](https://github.com/honojs/hon
 - **Styling**: Tailwind CSS 4 (Vite plugin)
 - **Interactivity**: React islands (Search, ThemeSwitcher, DocsToc)
 - **SSR**: Hono JSX for server-side rendering
+
+### Two-Bucket Architecture
+
+```
+┌─────────────────────────────────────────┐
+│      Cloudflare Worker                  │
+│                                         │
+│  ┌────────────┐      ┌────────────┐   │
+│  │  CONTENT   │      │  STATIC    │   │
+│  │  binding   │      │  binding   │   │
+│  └──────┬─────┘      └──────┬─────┘   │
+└─────────┼──────────────────┼───────────┘
+          │                  │
+          ▼                  ▼
+┌──────────────────┐  ┌──────────────────┐
+│  hono-content    │  │  hono-static     │
+│                  │  │                  │
+│ ✅ AI Search    │  │ ❌ Not indexed   │
+│    scans this    │  │                  │
+│                  │  │                  │
+│ • *.md files     │  │ • client.*.js    │
+│ • Indexed        │  │ • manifest.json  │
+│ • Searchable     │  │ • favicon, etc.  │
+└──────────────────┘  └──────────────────┘
+```
+
+**Why two buckets?**
+- `hono-content`: Only markdown files (indexed by AI Search)
+- `hono-static`: JavaScript, CSS, manifest (not indexed, saves resources)
 
 ## Quick Start
 
@@ -90,6 +120,11 @@ GitHub Actions will:
 3. Upload static assets to `hono-static` R2 bucket
 4. Deploy the Worker to Cloudflare
 
+**After deployment**, manually trigger AI Search indexing:
+1. Go to Cloudflare Dashboard → **AI** → **AI Search** → Your index
+2. Click **Sync** to re-index content
+3. Wait for indexing to complete (check **Jobs** tab)
+
 ### 6. Test
 
 Visit your Worker URL (e.g., `https://your-worker.workers.dev`) to see your docs!
@@ -119,35 +154,36 @@ semantic-docs-hono/
 │   ├── routes/              # File-based routes
 │   │   ├── index.tsx        # Home page
 │   │   ├── content/         # Article routes
-│   │   │   └── [...slug].tsx  # Catch-all article route
+│   │   │   └── [...slug].tsx  # Catch-all article route (fetches from R2)
 │   │   └── api/             # API routes
-│   │       └── search.ts    # Search API endpoint
+│   │       └── search.ts    # Search API endpoint (AI Search)
 │   ├── components/          # Hono JSX components
 │   │   ├── DocsHeader.tsx
 │   │   ├── DocsSidebar.tsx
 │   │   └── ui/              # shadcn-style components
 │   ├── islands/             # React islands (client-side)
-│   │   ├── Search.tsx       # Search dialog
+│   │   ├── Search.tsx       # Search dialog with ⌘K shortcut
 │   │   ├── ThemeSwitcher.tsx
 │   │   └── DocsToc.tsx      # Table of contents
 │   ├── _renderer.tsx        # HonoX layout renderer
-│   ├── client.tsx           # Client-side hydration
+│   ├── client.tsx           # Client-side hydration (createRoot)
 │   ├── server.ts            # Hono server entry
 │   └── style.css            # Tailwind styles
 ├── src/                     # Core logic
 │   ├── lib/
-│   │   ├── turso.ts         # Turso client (@libsql/client/web)
-│   │   ├── search-wrapper.ts
-│   │   └── libsql-search-runtime.ts  # Standalone search implementation
-│   ├── middleware/
-│   │   └── rateLimit.ts     # API rate limiting
+│   │   └── logger.ts        # Logging utility
 │   └── index.ts             # Workers entry point
 ├── content/                 # Markdown content
-├── scripts/                 # Database scripts
-│   ├── init-db.ts
-│   └── index-content.ts
+│   ├── getting-started/
+│   ├── features/
+│   └── guides/
+├── scripts/                 # Build scripts
+│   └── generate-client-manifest.ts  # Cache busting
+├── docs/                    # Setup documentation
+│   ├── CLOUDFLARE_SETUP.md
+│   └── RATE_LIMITING.md
 ├── vite.config.ts
-├── wrangler.toml            # Cloudflare Workers config
+├── wrangler.toml            # Cloudflare Workers config (R2 bindings)
 └── package.json
 ```
 
@@ -160,31 +196,29 @@ semantic-docs-hono/
 ### Rendering
 - **Astro components** → **Hono JSX**: Server-side rendering
 - React components → **React islands**: Client-side hydration for interactivity
-- Manual HTML wrapper with `c.html()` instead of Astro layouts
+- Manual HTML wrapper with `c.html()` or `c.body()` instead of Astro layouts
 
 ### Routing
 - File naming: `[...slug].tsx` for catch-all routes (HonoX convention)
 - Routes wrapped with `createRoute()` from `honox/factory`
+- Content fetched from R2 at runtime (not pre-rendered)
 
-### Database Client
-- Using `@libsql/client/web` import for Workers compatibility
-- Custom search runtime (`libsql-search-runtime.ts`) to avoid CommonJS dependencies
+### Search & Storage
+- **Turso/libSQL** → **Cloudflare R2 + AI Search**
+- No manual indexing required (AI Search auto-indexes R2)
+- No database credentials needed (uses Worker bindings)
 
 ### Environment Variables
-- Loaded via Vite's `loadEnv()` and injected with `define` in `vite.config.ts`
-- Access via `process.env` (replaced at build time)
+- **Before**: Turso credentials, embedding provider API keys
+- **Now**: Only `AI_SEARCH_INDEX` (set in Worker settings)
 
 ## Commands
 
 ```bash
 # Development
-pnpm dev              # Start dev server (http://localhost:5174)
+pnpm dev:remote       # Start remote dev server (wrangler dev --remote)
 pnpm build            # Build for production
-pnpm preview          # Preview production build
-
-# Database
-pnpm db:init          # Initialize Turso database schema
-pnpm index            # Index markdown content to Turso
+pnpm preview          # Preview production build (wrangler dev --remote)
 
 # Testing & Linting
 pnpm test             # Run tests with Vitest
@@ -197,6 +231,8 @@ pnpm format           # Format all files
 # Deployment
 pnpm deploy           # Deploy to Cloudflare Workers
 ```
+
+**Note**: `pnpm dev` is disabled because local development requires Cloudflare bindings (R2, AI Search) that aren't available locally. Use `pnpm dev:remote` instead.
 
 ## Deployment
 
@@ -214,34 +250,22 @@ npx wrangler deploy
 
 The `wrangler.toml` is configured to build the project automatically before deployment.
 
-**Set environment variables (secrets) using Wrangler CLI:**
+**Set environment variables in Cloudflare Dashboard:**
 
-```bash
-# Set Turso credentials (required)
-npx wrangler secret put TURSO_DB_URL
-npx wrangler secret put TURSO_AUTH_TOKEN
+1. Go to **Workers & Pages** → Your Worker
+2. **Settings** → **Variables and Secrets**
+3. Add **Environment Variable**:
+   - **Variable name**: `AI_SEARCH_INDEX`
+   - **Value**: Your AI Search index name (e.g., `semantic-docs`)
+4. Click **Deploy** to apply changes
 
-# Set embedding provider (required for production)
-npx wrangler secret put EMBEDDING_PROVIDER
-# Enter: gemini or openai
-
-# If using Gemini
-npx wrangler secret put GEMINI_API_KEY
-
-# If using OpenAI
-npx wrangler secret put OPENAI_API_KEY
-```
-
-**Or set via Cloudflare Dashboard:**
-1. Go to Workers & Pages > Your Worker
-2. Settings > Variables and Secrets
-3. Add the environment variables listed above
+**That's it!** No database credentials or API keys needed for basic functionality.
 
 ### Rate Limiting (Important!)
 
 ⚠️ **Configure rate limiting via Cloudflare Dashboard** to protect your API:
 
-1. Go to Security → WAF → Rate Limiting Rules
+1. Go to **Security** → **WAF** → **Rate Limiting Rules**
 2. Create rule for `/api/search` endpoint
 3. Recommended: 20 requests/minute per IP
 
@@ -250,54 +274,130 @@ npx wrangler secret put OPENAI_API_KEY
 ### Environment Variables
 
 Required:
-- `TURSO_DB_URL`: Your Turso database URL (libsql://...)
-- `TURSO_AUTH_TOKEN`: Your Turso authentication token
+- `AI_SEARCH_INDEX`: Your Cloudflare AI Search index name
 
-Optional:
-- `EMBEDDING_PROVIDER`: `local` (default), `gemini`, or `openai`
-- `GEMINI_API_KEY`: If using Gemini embeddings
-- `OPENAI_API_KEY`: If using OpenAI embeddings
+**GitHub Secrets** (for deployment workflow):
+- `CLOUDFLARE_API_TOKEN`: API token with Workers edit permissions
+- `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare account ID
+
+**GitHub Variables**:
+- `R2_CONTENT_BUCKET`: Content bucket name (default: `hono-content`)
+- `R2_STATIC_BUCKET`: Static bucket name (default: `hono-static`)
 
 ## Search Functionality
 
-The semantic search is powered by vector embeddings stored in Turso:
+The semantic search is powered by Cloudflare AI Search:
 
-1. **Indexing**: Markdown content is converted to 768-dimension vectors
-2. **Query**: User searches are converted to vectors
-3. **Matching**: Vector similarity finds relevant articles
-4. **Results**: Grouped by folder, sorted by relevance
+1. **Manual Indexing**: After deploying content, click **Sync** in AI Search dashboard
+2. **Embedding Generation**: AI Search converts content to vector embeddings
+3. **Query Processing**: User searches are vectorized and matched against indexed content
+4. **Reranking**: Results are reranked for relevance
+5. **Results**: Returned via `/api/search` endpoint
 
-**Embedding Providers:**
-- `local`: @xenova/transformers (Xenova/all-MiniLM-L6-v2) - runs in browser/Workers
-- `gemini`: Google Gemini API
-- `openai`: OpenAI API
+**Indexing workflow**:
+1. Deploy content to R2 (via GitHub Actions or manual upload)
+2. Go to Cloudflare Dashboard → **AI** → **AI Search** → Your index
+3. Click **Sync** to trigger re-indexing
+4. Wait for job to complete (check **Jobs** tab)
+5. Search will now return updated results
 
-> **Note**: Local embeddings work in development but are externalized for Workers compatibility. For production Workers deployment, use `gemini` or `openai`.
+**Search features:**
+- ⌘K keyboard shortcut to open
+- Real-time results as you type
+- Debounced API calls (300ms)
+- Understanding of synonyms and related concepts
+- Typo tolerance
+
+See `content/features/semantic-search.md` for detailed documentation.
+
+## Content Management
+
+### Adding Content
+
+1. Create markdown file in `./content/folder/article.md`
+2. Add frontmatter:
+   ```markdown
+   ---
+   title: Article Title
+   tags: [tag1, tag2]
+   ---
+   ```
+3. Commit and push to GitHub
+4. GitHub Actions uploads to R2
+5. **Manually trigger AI Search sync** in Cloudflare dashboard
+
+### Deleting Content
+
+1. Delete file from `./content`
+2. Commit and push
+3. **Manually delete from R2**:
+   ```bash
+   npx wrangler r2 object delete hono-content/folder/article.md --remote
+   ```
+4. **Manually trigger AI Search sync** in Cloudflare dashboard
+
+See `content/features/r2-storage.md` for full deletion workflow.
 
 ## Known Limitations
 
-### Search in Workers
-The `@xenova/transformers` package is externalized for Workers compatibility. The search dropdown will work in development but may need cloud embeddings (`gemini` or `openai`) for production Workers deployment.
+### Local Development
+
+- **No local dev**: `pnpm dev` is disabled because R2 and AI Search bindings aren't available locally
+- **Use remote dev**: `pnpm dev:remote` runs against Cloudflare infrastructure
+- See [DEVELOPMENT.md](./DEVELOPMENT.md) for details
+
+### Manual Deletion
+
+- Deleting files from `./content` doesn't automatically delete from R2
+- Must manually run `npx wrangler r2 object delete` command
+- See R2 Storage documentation for details
 
 ### Islands Hydration
-React islands (Search, ThemeSwitcher, DocsToc) require client-side hydration via `app/client.tsx`. The script is included in the HTML but may need further configuration for optimal Workers deployment.
+
+- React islands (Search, ThemeSwitcher, DocsToc) use `createRoot()` for client-side mounting
+- Islands are not server-rendered (client-only components)
 
 ## Development Notes
 
 ### Hono JSX vs React
+
 - Server components use Hono JSX (imported from `hono/jsx`)
 - Client islands use React (imported from `react`)
 - `tsconfig.json` uses `"jsxImportSource": "hono/jsx"` by default
+- Islands override with `/** @jsxImportSource react */` pragma
 
 ### File Extensions
+
 - `.tsx` files in `app/routes/` and `app/components/` use Hono JSX
-- `.tsx` files in `app/islands/` use React
-- `app/client.tsx` handles island hydration
+- `.tsx` files in `app/islands/` use React with pragma override
+- `app/client.tsx` handles island hydration with `createRoot()`
 
 ### CSS & Styling
+
 - Tailwind CSS 4 via `@tailwindcss/vite` plugin
 - CSS variables in `app/style.css` for theming
 - Multiple theme support (dark, light, ocean, forest, sunset, purple)
+
+### Cache Busting
+
+- Client JavaScript uses timestamped filenames: `client.1731369600000.js`
+- Generated during build via `scripts/generate-client-manifest.ts`
+- Ensures users get latest code after deployments
+
+## Documentation
+
+Comprehensive guides available in `content/features/`:
+
+- **[semantic-search.md](./content/features/semantic-search.md)** - How AI Search works
+- **[honox-framework.md](./content/features/honox-framework.md)** - HonoX routing and SSR
+- **[r2-storage.md](./content/features/r2-storage.md)** - R2 architecture and file management
+- **[react-islands.md](./content/features/react-islands.md)** - Islands architecture
+
+Setup guides in `docs/`:
+
+- **[CLOUDFLARE_SETUP.md](./docs/CLOUDFLARE_SETUP.md)** - Complete Cloudflare setup
+- **[RATE_LIMITING.md](./docs/RATE_LIMITING.md)** - Rate limiting configuration
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development workflows
 
 ## Contributing
 
@@ -306,7 +406,7 @@ Contributions welcome! This is a community-driven project.
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests and linter
+4. Run tests and linter: `pnpm lint && pnpm test`
 5. Submit a pull request
 
 ## License
@@ -316,12 +416,12 @@ MIT License - see LICENSE file for details
 ## Credits
 
 - Built with [HonoX](https://github.com/honojs/honox)
-- Powered by [libsql-search](https://github.com/llbbl/libsql-search)
-- Database: [Turso](https://turso.tech)
+- Search powered by [Cloudflare AI Search](https://developers.cloudflare.com/ai-search/)
+- Storage via [Cloudflare R2](https://developers.cloudflare.com/r2/)
 - Inspired by [semantic-docs](https://github.com/llbbl/semantic-docs) (Astro version)
 
 ## Support
 
-- GitHub Issues: [Report bugs or request features](https://github.com/llbbl/semantic-docs-hono/issues)
-- Discussions: Share ideas and ask questions
-- Documentation: Check the `/content` folder for examples
+- **GitHub Issues**: [Report bugs or request features](https://github.com/llbbl/semantic-docs-hono/issues)
+- **Discussions**: Share ideas and ask questions
+- **Documentation**: Check `content/features/` for comprehensive guides

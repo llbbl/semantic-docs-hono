@@ -27,12 +27,13 @@ Finds: "deploy", "push to production", "publish", "release"
 
 ### Behind the Scenes
 
-1. **Automatic Indexing**: Cloudflare AI Search automatically scans your R2 bucket
-2. **Embedding Generation**: Converts markdown content into vector embeddings
-3. **Vector Search**: Finds documents similar in meaning to your query
-4. **Reranking**: Orders results by relevance
+1. **Manual Sync Trigger**: You click "Sync" in the AI Search dashboard after deploying content
+2. **Bucket Scanning**: AI Search scans your R2 bucket for markdown files
+3. **Embedding Generation**: Converts markdown content into vector embeddings
+4. **Vector Search**: Finds documents similar in meaning to your query
+5. **Reranking**: Orders results by relevance
 
-All of this happens automatically - no manual indexing required!
+After the initial setup, you only need to click "Sync" when you add or update content.
 
 ## Architecture
 
@@ -88,12 +89,13 @@ In Cloudflare Dashboard:
 1. **AI** → **AI Search** → **Create Index**
 2. Point to `hono-content` bucket
 3. Enable Markdown file type
-4. Wait for initial indexing
+4. Click **Sync** to start initial indexing
+5. Wait for indexing to complete (check **Jobs** tab)
 
-That's it! AI Search automatically:
-- Detects new/updated files
-- Generates embeddings
-- Updates the index
+After the initial setup, click **Sync** whenever you:
+- Add new markdown files to R2
+- Update existing files
+- Delete files from R2
 
 ### 3. Search API
 
@@ -160,9 +162,9 @@ export default function Search() {
 
 ## Features
 
-### ✅ Automatic Indexing
+### ✅ Simple Indexing
 
-No manual steps! Just push markdown files to R2:
+Deploy markdown files to R2 and trigger a sync:
 
 ```bash
 # GitHub Actions does this automatically
@@ -170,7 +172,10 @@ wrangler r2 object put "hono-content/features/new-feature.md" \
   --file="./content/features/new-feature.md"
 ```
 
-AI Search detects the new file and indexes it automatically.
+Then manually sync in the dashboard:
+1. Go to **AI** → **AI Search** → Your index
+2. Click **Sync**
+3. Wait for job to complete
 
 ### ✅ Understanding Synonyms
 
@@ -245,13 +250,13 @@ Cached at the edge via Cloudflare Workers.
 
 ### Indexing Speed
 
-After uploading new content:
+After uploading new content and clicking **Sync**:
 
-- **Detection**: ~1-5 minutes
-- **Indexing**: ~5-15 minutes
-- **Manual sync**: Click "Sync" in dashboard for instant indexing
+- **Scanning**: ~1-2 minutes
+- **Indexing**: ~5-15 minutes (depending on content size)
+- **Job Status**: Check **AI** → **AI Search** → Your index → **Jobs**
 
-Check index status: **AI** → **AI Search** → Your index → **Jobs**
+**Note**: Indexing is triggered manually by clicking **Sync** in the dashboard, not automatically.
 
 ## Environment Variables
 
@@ -280,7 +285,8 @@ R2_STATIC_BUCKET=hono-static    # Static assets
 3. Check "Total index results" count
 
 **Common issues:**
-- Index not finished (wait or click "Sync")
+- Forgot to click "Sync" after deploying content
+- Index job still running (check **Jobs** tab)
 - Wrong bucket configured
 - No markdown files in `hono-content` bucket
 

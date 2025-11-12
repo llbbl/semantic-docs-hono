@@ -32,8 +32,8 @@ pnpm preview
 
 ### Content Management
 ```bash
-# No database indexing required!
-# Content is uploaded to R2 and automatically indexed by AI Search
+# No local indexing scripts!
+# Content is uploaded to R2, then manually synced in AI Search dashboard
 
 # Run tests
 pnpm test
@@ -47,7 +47,7 @@ pnpm format     # Format all files
 **Important:**
 - Local dev (`pnpm dev`) is disabled - must use `pnpm dev:remote` with Cloudflare
 - Content in `./content` is deployed to R2 via GitHub Actions
-- AI Search automatically indexes R2 content (no manual indexing step)
+- After deploying content, manually trigger AI Search sync in dashboard
 - Search is fully managed by Cloudflare AI Search
 
 ## Architecture
@@ -96,9 +96,10 @@ pnpm format     # Format all files
    - Uploads markdown to `hono-content` R2 bucket
    - Uploads static assets to `hono-static` R2 bucket
    - Deploys Worker to Cloudflare
-3. **AI Search auto-indexes**: Cloudflare AI Search detects new/updated files in `hono-content` and indexes them (5-15 minutes)
-4. **User requests page**: Worker fetches markdown from R2, renders HTML with HonoX
-5. **User searches**: Search API calls AI Search, which returns semantically relevant results
+3. **Manual AI Search sync**: Developer clicks "Sync" in Cloudflare AI Search dashboard
+4. **AI Search indexes**: Scans `hono-content` bucket and generates embeddings (5-15 minutes)
+5. **User requests page**: Worker fetches markdown from R2, renders HTML with HonoX
+6. **User searches**: Search API calls AI Search, which returns semantically relevant results
 
 ### Key Components
 
@@ -150,11 +151,11 @@ const searchResponse = await c.env.AI.autorag(c.env.AI_SEARCH_INDEX).search({
 // Returns: { data: [...], has_more: boolean, next_page: string | null }
 ```
 
-**No manual indexing required** - AI Search automatically:
-- Detects new/updated files in R2
-- Generates embeddings
-- Updates search index
-- Handles reranking for relevance
+**Manual sync required** - After deploying content:
+1. Go to Cloudflare Dashboard → AI → AI Search → Your index
+2. Click **Sync** to trigger re-indexing
+3. AI Search scans R2, generates embeddings, and updates index
+4. Handles reranking for relevance during search queries
 
 ### Environment Variables
 
@@ -283,8 +284,8 @@ export default createRoute(async (c) => {
 
 The project uses Cloudflare AI Search for semantic vector search:
 
-1. **Automatic indexing**: AI Search scans `hono-content` bucket
-2. **No manual steps**: No embedding generation or database writes needed
+1. **Manual sync trigger**: Click "Sync" in AI Search dashboard after deploying content
+2. **AI Search handles**: Embedding generation, vector storage, and index updates
 3. **Search API**: Use `c.env.AI.autorag(indexName).search()` in routes
 4. **Reranking**: Enable `rerank: true` for better relevance
 
@@ -470,14 +471,15 @@ pnpm dev:remote                  # Remote dev starts
 2. Add frontmatter with title and tags
 3. Commit and push to GitHub
 4. GitHub Actions automatically uploads to R2
-5. AI Search re-indexes within 5-15 minutes
+5. **Manually click "Sync"** in AI Search dashboard
+6. Wait for indexing to complete (5-15 minutes)
 
 ### Deleting Content
 
 1. Delete file from `./content`
 2. Commit and push
 3. **Manually delete from R2**: `npx wrangler r2 object delete hono-content/folder/article.md --remote`
-4. Trigger AI Search sync in dashboard (or wait for auto-sync)
+4. **Manually click "Sync"** in AI Search dashboard to update index
 
 ### Updating Search Behavior
 
@@ -497,10 +499,10 @@ pnpm dev:remote                  # Remote dev starts
 
 ### Search Returns No Results
 
-1. Check AI Search index status in dashboard
-2. Verify files uploaded to R2: `npx wrangler r2 object list hono-content --remote`
-3. Check `AI_SEARCH_INDEX` env var is set in Worker settings
-4. Trigger manual sync in AI Search dashboard
+1. **Click "Sync"** in AI Search dashboard (most common issue)
+2. Check index job status in **Jobs** tab
+3. Verify files uploaded to R2: `npx wrangler r2 object list hono-content --remote`
+4. Check `AI_SEARCH_INDEX` env var is set in Worker settings
 
 ### Content Not Loading
 
