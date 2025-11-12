@@ -9,6 +9,22 @@ import type { Env } from '../../types';
 
 const app = new Hono<{ Bindings: Env }>();
 
+// AI Search result item type
+interface AISearchResultItem {
+  file_id: string;
+  filename: string;
+  score: number;
+  attributes: {
+    folder?: string;
+    timestamp?: number;
+  };
+  content: Array<{
+    id: string;
+    type: string;
+    text: string;
+  }>;
+}
+
 // Note: Rate limiting should be configured via Cloudflare Dashboard
 // See docs/RATE_LIMITING.md for setup instructions
 
@@ -68,13 +84,13 @@ app.all('/', async (c) => {
     // Log response for debugging
     logger.info('AI Search response', {
       hasResponse: !!searchResponse,
-      hasResults: !!searchResponse?.results,
+      hasData: !!searchResponse?.data,
       responseType: typeof searchResponse,
-      resultCount: searchResponse?.results?.length || 0,
+      resultCount: searchResponse?.data?.length || 0,
     });
 
-    // Check if results exist
-    if (!searchResponse || !searchResponse.results) {
+    // Check if data exists (AI Search returns 'data' not 'results')
+    if (!searchResponse || !searchResponse.data) {
       logger.error('Invalid AI Search response', {
         response: JSON.stringify(searchResponse),
       });
@@ -83,20 +99,22 @@ app.all('/', async (c) => {
           error: 'Invalid search response',
           message:
             'AI Search returned an invalid response. Check if the index exists and has data.',
-          debug:
-            process.env.NODE_ENV === 'development'
-              ? { response: searchResponse }
-              : undefined,
         },
         500,
       );
     }
 
-    // Transform results to match previous API format
-    const results = searchResponse.results.map((result) => ({
-      content: result.content,
-      score: result.score,
-      metadata: result.metadata,
+    // Transform AI Search results to match expected API format
+    const results = searchResponse.data.map((item: AISearchResultItem) => ({
+      content: item.content?.[0]?.text || '', // Get first text chunk
+      score: item.score,
+      metadata: {
+        title:
+          item.filename?.replace('.md', '').replace(/\//g, ' - ') || 'Untitled',
+        slug: item.filename?.replace('.md', '') || '',
+        folder: item.attributes?.folder || '',
+        tags: [],
+      },
     }));
 
     return c.json({

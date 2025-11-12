@@ -21,10 +21,16 @@ export interface Env {
         max_num_results?: number;
       }) => Promise<{
         answer: string;
-        results: Array<{
-          content: string;
+        data: Array<{
+          file_id: string;
+          filename: string;
           score: number;
-          metadata?: Record<string, unknown>;
+          attributes: Record<string, unknown>;
+          content: Array<{
+            id: string;
+            type: string;
+            text: string;
+          }>;
         }>;
       }>;
       search: (options: {
@@ -32,11 +38,21 @@ export interface Env {
         max_num_results?: number;
         rerank?: boolean;
       }) => Promise<{
-        results: Array<{
-          content: string;
+        object: string;
+        search_query: string;
+        data: Array<{
+          file_id: string;
+          filename: string;
           score: number;
-          metadata?: Record<string, unknown>;
+          attributes: Record<string, unknown>;
+          content: Array<{
+            id: string;
+            type: string;
+            text: string;
+          }>;
         }>;
+        has_more: boolean;
+        next_page: string | null;
       }>;
     };
   };
