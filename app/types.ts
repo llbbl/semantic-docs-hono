@@ -5,8 +5,11 @@
 import type { R2Bucket } from '@cloudflare/workers-types';
 
 export interface Env {
-  // R2 bucket for content storage
+  // R2 bucket for markdown content (scanned by AI Search)
   CONTENT: R2Bucket;
+
+  // R2 bucket for static assets (not indexed by AI Search)
+  STATIC: R2Bucket;
 
   // AI binding for semantic search
   AI: {

@@ -5,10 +5,15 @@ compatibility_flags = ["nodejs_compat"]
 main = "dist/index.js"
 keep_vars = true
 
-# R2 Bucket for content storage
+# R2 Bucket for markdown content (scanned by AI Search)
 [[r2_buckets]]
 binding = "CONTENT"
-bucket_name = "hono"
+bucket_name = "hono-content"
+
+# R2 Bucket for static assets (not indexed by AI Search)
+[[r2_buckets]]
+binding = "STATIC"
+bucket_name = "hono-static"
 
 # AI Search binding for semantic search
 [ai]

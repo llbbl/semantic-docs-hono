@@ -94,8 +94,8 @@ export default createRoute(async (c) => {
   // Convert markdown to HTML
   const htmlContent = await marked(content);
 
-  // Fetch manifest for sidebar
-  const manifestObject = await env.CONTENT.get('manifest.json');
+  // Fetch manifest from STATIC bucket for sidebar
+  const manifestObject = await env.STATIC.get('manifest.json');
   if (!manifestObject) {
     return c.text('Manifest not found', 500);
   }
@@ -104,74 +104,79 @@ export default createRoute(async (c) => {
   const currentPath = c.req.path;
 
   return c.html(
-    <html lang="en" class="dark">
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <title>{title}</title>
-        <meta name="description" content={title} />
-        <link rel="stylesheet" href="/app/style.css" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
+    <>
+      {'<!DOCTYPE html>'}
+      <html lang="en" class="dark">
+        <head>
+          <meta charSet="UTF-8" />
+          <meta name="viewport" content="width=device-width" />
+          <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          <title>{title}</title>
+          <meta name="description" content={title} />
+          <link rel="stylesheet" href="/app/style.css" />
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
             (function() {
               const savedTheme = localStorage.getItem('theme') || 'dark';
               document.documentElement.classList.add('dark');
             })();
           `,
-          }}
-        />
-        <script type="module" src={`/app/${clientFilename}`} />
-      </head>
-      <body className="min-h-screen bg-background text-foreground">
-        <div>
-          <DocsHeader />
+            }}
+          />
+          <script type="module" src={`/app/${clientFilename}`} />
+        </head>
+        <body className="min-h-screen bg-background text-foreground">
+          <div>
+            <DocsHeader />
 
-          <div className="flex">
-            <DocsSidebar folders={manifest.folders} currentPath={currentPath} />
+            <div className="flex">
+              <DocsSidebar
+                folders={manifest.folders}
+                currentPath={currentPath}
+              />
 
-            <main className="flex-1 lg:pl-64 xl:pr-64 min-w-0 relative z-10">
-              <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-                <article className="prose prose-neutral dark:prose-invert max-w-none overflow-x-auto relative">
-                  <header className="mb-8 pb-6 border-b border-border">
-                    <h1 className="text-4xl font-bold tracking-tight text-balance mb-4">
-                      {title}
-                    </h1>
-                    {tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {tags.map((tag: string) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </header>
+              <main className="flex-1 lg:pl-64 xl:pr-64 min-w-0 relative z-10">
+                <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+                  <article className="prose prose-neutral dark:prose-invert max-w-none overflow-x-auto relative">
+                    <header className="mb-8 pb-6 border-b border-border">
+                      <h1 className="text-4xl font-bold tracking-tight text-balance mb-4">
+                        {title}
+                      </h1>
+                      {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {tags.map((tag: string) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </header>
 
-                  <div
-                    className="article-content"
-                    dangerouslySetInnerHTML={{ __html: htmlContent }}
-                  />
-                </article>
-              </div>
-            </main>
+                    <div
+                      className="article-content"
+                      dangerouslySetInnerHTML={{ __html: htmlContent }}
+                    />
+                  </article>
+                </div>
+              </main>
 
-            <div
-              data-hydrate="true"
-              data-component="DocsToc"
-              data-props="{}"
-              className="fixed top-14 right-0 z-30 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-l border-toc-border bg-toc xl:block"
-            />
-          </div>
+              <div
+                data-hydrate="true"
+                data-component="DocsToc"
+                data-props="{}"
+                className="fixed top-14 right-0 z-30 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 overflow-y-auto border-l border-toc-border bg-toc xl:block"
+              />
+            </div>
 
-          {/* Article content styling */}
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `
+            {/* Article content styling */}
+            <style
+              dangerouslySetInnerHTML={{
+                __html: `
             .article-content {
               line-height: 1.75;
               color: var(--foreground);
@@ -326,10 +331,11 @@ export default createRoute(async (c) => {
               font-weight: 600;
             }
           `,
-            }}
-          />
-        </div>
-      </body>
-    </html>,
+              }}
+            />
+          </div>
+        </body>
+      </html>
+    </>,
   );
 });

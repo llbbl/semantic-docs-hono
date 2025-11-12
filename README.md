@@ -2,31 +2,35 @@
 
 HonoX documentation theme with semantic vector search for Cloudflare Workers.
 
-A beautiful documentation theme powered by [HonoX](https://github.com/honojs/honox) and [libsql-search](https://github.com/llbbl/libsql-search) for semantic search capabilities. Optimized for deployment on Cloudflare Workers.
+A beautiful documentation theme powered by [HonoX](https://github.com/honojs/honox) and Cloudflare AI Search for semantic search capabilities. Fully optimized for Cloudflare Workers with R2 storage.
 
 > **Note**: This is a HonoX port of [semantic-docs](https://github.com/llbbl/semantic-docs). For the original Astro version, see the main repository.
 
 ## Features
 
 - 🎨 **Modern Dark UI** - Sleek design with Tailwind CSS
-- 🔍 **Semantic Search** - AI-powered vector search (React island component)
+- 🔍 **Semantic Search** - Cloudflare AI Search with automatic indexing (React island component)
+- 📦 **R2 Storage** - Markdown content and static assets stored on Cloudflare R2
 - 📱 **Responsive** - Mobile-friendly with collapsible sidebar
 - 📑 **Auto TOC** - Table of contents generated from headings
-- 🚀 **Edge-Ready** - Built for Cloudflare Workers with HonoX
+- 🚀 **Edge-Ready** - Runs globally on Cloudflare Workers
 - ⚡ **Fast** - SSR with Hono JSX and React islands for interactivity
 - 🎯 **Type-Safe** - Full TypeScript support
-- 🌐 **Turso Database** - Distributed SQLite with vector search
+- 🔄 **Auto Deploy** - GitHub Actions deploys on push to main
 
 ## Architecture
 
 - **Framework**: [HonoX](https://github.com/honojs/honox) - File-based routing meta-framework for Hono
 - **Runtime**: Cloudflare Workers
-- **Database**: Turso (libSQL) with vector search via libsql-search
+- **Storage**: Cloudflare R2 (two buckets: content and static)
+- **Search**: Cloudflare AI Search with automatic markdown indexing
 - **Styling**: Tailwind CSS 4 (Vite plugin)
 - **Interactivity**: React islands (Search, ThemeSwitcher, DocsToc)
 - **SSR**: Hono JSX for server-side rendering
 
 ## Quick Start
+
+> ⚠️ **Local Development Note**: This project requires Cloudflare infrastructure (R2 buckets, AI Search). Traditional local development with `pnpm dev` **does not work**. See [DEVELOPMENT.md](./DEVELOPMENT.md) for details.
 
 ### 1. Clone Repository
 
@@ -41,37 +45,16 @@ cd semantic-docs-hono
 pnpm install
 ```
 
-### 3. Set Up Environment
+### 3. Set Up Cloudflare
 
-Copy `.env.example` to `.env` and add your credentials:
+Follow the detailed setup guide: **[docs/CLOUDFLARE_SETUP.md](./docs/CLOUDFLARE_SETUP.md)**
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```env
-TURSO_DB_URL=libsql://your-database.turso.io
-TURSO_AUTH_TOKEN=your-auth-token
-EMBEDDING_PROVIDER=local  # or 'gemini' or 'openai'
-```
-
-**Get Turso credentials:**
-
-```bash
-# Install Turso CLI
-curl -sSfL https://get.tur.so/install.sh | bash
-
-# Sign up and authenticate
-turso auth signup
-
-# Create a database
-turso db create my-docs
-
-# Get credentials
-turso db show my-docs
-```
+Quick checklist:
+- [ ] Create two R2 buckets: `hono-content` and `hono-static`
+- [ ] Create AI Search index pointing to `hono-content` bucket
+- [ ] Set GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- [ ] Set GitHub variables: `R2_CONTENT_BUCKET`, `R2_STATIC_BUCKET`
+- [ ] Set Worker env variable: `AI_SEARCH_INDEX`
 
 ### 4. Add Your Content
 
@@ -79,12 +62,7 @@ Create markdown files in `./content`:
 
 ```bash
 mkdir -p content/getting-started
-echo "# Hello World\n\nThis is my first article." > content/getting-started/intro.md
-```
-
-**Front matter support:**
-
-```markdown
+cat > content/getting-started/intro.md << 'EOF'
 ---
 title: Getting Started
 tags: [tutorial, beginner]
@@ -92,26 +70,46 @@ tags: [tutorial, beginner]
 
 # Getting Started
 
-Your content here...
+This is my first article!
+EOF
 ```
 
-### 5. Index Content
+### 5. Deploy
+
+Push to GitHub to trigger automatic deployment:
 
 ```bash
-# Initialize database schema
-pnpm db:init
-
-# Index content to Turso
-pnpm index
+git add .
+git commit -m "Add content"
+git push origin main
 ```
 
-### 6. Run Development Server
+GitHub Actions will:
+1. Build the client and server bundles
+2. Upload markdown files to `hono-content` R2 bucket
+3. Upload static assets to `hono-static` R2 bucket
+4. Deploy the Worker to Cloudflare
+
+### 6. Test
+
+Visit your Worker URL (e.g., `https://your-worker.workers.dev`) to see your docs!
+
+## Development
+
+For local development (requires Cloudflare setup):
 
 ```bash
-pnpm dev
+# Remote development (recommended)
+pnpm dev:remote
+
+# Build locally
+pnpm build
+
+# Deploy manually
+pnpm deploy
 ```
 
-Visit `http://localhost:5174` to see your docs!
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed development workflows.
 
 ## Project Structure
 

@@ -8,26 +8,36 @@ This guide explains how to configure your Cloudflare account for deploying seman
 - GitHub repository with your content
 - Wrangler CLI installed (`npm install -g wrangler`)
 
-## 1. Create R2 Bucket
+## 1. Create R2 Buckets
 
-The R2 bucket stores your markdown content and manifest.
+This project uses **two separate R2 buckets** to keep AI Search focused on markdown content only:
+
+- **`hono-content`**: Stores markdown files (scanned by AI Search)
+- **`hono-static`**: Stores static assets like client.js, favicon, manifest.json (NOT scanned by AI Search)
 
 ```bash
 # Login to Cloudflare
 wrangler login
 
-# Create R2 bucket (use the same name as in wrangler.toml)
-wrangler r2 bucket create hono
+# Create content bucket for markdown files
+wrangler r2 bucket create hono-content
+
+# Create static bucket for assets
+wrangler r2 bucket create hono-static
 ```
 
-**Note:** If you want to use a different bucket name, update `wrangler.toml`:
+**Note:** If you want to use different bucket names, update `wrangler.toml`:
 ```toml
 [[r2_buckets]]
 binding = "CONTENT"
-bucket_name = "your-bucket-name"  # Change this
+bucket_name = "your-content-bucket-name"  # Change this
+
+[[r2_buckets]]
+binding = "STATIC"
+bucket_name = "your-static-bucket-name"  # Change this
 ```
 
-And update the GitHub secret `R2_BUCKET_NAME` to match.
+And update the GitHub variables `R2_CONTENT_BUCKET` and `R2_STATIC_BUCKET` to match.
 
 ## 2. Create AI Search Index
 
@@ -38,11 +48,13 @@ Cloudflare AI Search indexes your R2 content for semantic search.
 1. Go to **AI** → **AI Search** in your Cloudflare dashboard
 2. Click **Create Index**
 3. Configure:
-   - **Name**: `semantic-docs` (must match `AI_SEARCH_INDEX` in `app/routes/api/search.ts`)
+   - **Name**: `semantic-docs` (or your choice - this will be used in `AI_SEARCH_INDEX` env var)
    - **Data Source**: R2 Bucket
-   - **Bucket**: Select your R2 bucket (`hono`)
+   - **Bucket**: Select **`hono-content`** (the content bucket, NOT the static bucket)
    - **File Types**: Enable Markdown (.md)
 4. Click **Create Index**
+
+**Important:** Point AI Search to the `hono-content` bucket only. This ensures AI Search doesn't waste resources indexing JavaScript files, manifests, or other static assets.
 
 ### Index Configuration:
 
@@ -69,17 +81,18 @@ Go to **Settings** → **Secrets and variables** → **Actions** → **Secrets**
 | `CLOUDFLARE_API_TOKEN` | API token for Wrangler | [Create token](https://dash.cloudflare.com/profile/api-tokens) with "Edit Cloudflare Workers" permissions |
 | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID | Found in dashboard URL or Workers overview page |
 
-### Repository Variables (Optional)
+### Repository Variables (Required)
 
 **These are non-sensitive configuration values.**
 
 Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**
 
-| Variable Name | Description | Default |
+| Variable Name | Value | Description |
 |------------|-------------|---------|
-| `R2_BUCKET_NAME` | Custom R2 bucket name | `hono` |
+| `R2_CONTENT_BUCKET` | `hono-content` | R2 bucket for markdown files |
+| `R2_STATIC_BUCKET` | `hono-static` | R2 bucket for static assets |
 
-**Note:** Only add `R2_BUCKET_NAME` if you're using a different bucket name than `hono`. If omitted, the workflow defaults to `hono`.
+**Note:** If you used different bucket names in step 1, use those names here.
 
 ### Cloudflare Worker Variables (Required)
 
@@ -207,16 +220,18 @@ GitHub Push
     ↓
 GitHub Actions
     ├── Generate manifest.json (from ./content)
-    ├── Upload manifest + markdown to R2
+    ├── Upload markdown to hono-content bucket
+    ├── Upload manifest + static assets to hono-static bucket
     └── Deploy Worker
         ↓
 Cloudflare Workers
-    ├── Fetch content from R2
+    ├── Fetch markdown from CONTENT bucket (hono-content)
+    ├── Fetch manifest/assets from STATIC bucket (hono-static)
     ├── Render pages with Hono/React
     └── Search via AI Search API
         ↓
 AI Search (automatic)
-    ├── Indexes R2 markdown files
+    ├── Indexes ONLY hono-content bucket (markdown files)
     ├── Generates embeddings
     └── Returns semantic search results
 ```

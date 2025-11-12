@@ -12,12 +12,12 @@ app.get('/app/style.css', (c) => {
   });
 });
 
-// Serve client JS from R2 (with wildcard to support cache-busted filenames)
+// Serve client JS from STATIC bucket (with wildcard to support cache-busted filenames)
 app.get('/app/client.*.js', async (c) => {
   const env = c.env as Env;
 
-  // List files in static/ to find the latest client.*.js
-  const listed = await env.CONTENT.list({ prefix: 'static/client.' });
+  // List files in STATIC bucket to find the latest client.*.js
+  const listed = await env.STATIC.list({ prefix: 'client.' });
   const clientFiles = listed.objects
     .filter((obj) => obj.key.endsWith('.js'))
     .sort(
@@ -28,7 +28,7 @@ app.get('/app/client.*.js', async (c) => {
     return c.text('Client bundle not found', 404);
   }
 
-  const file = await env.CONTENT.get(clientFiles[0].key);
+  const file = await env.STATIC.get(clientFiles[0].key);
   if (!file) {
     return c.text('Client bundle not found', 404);
   }
@@ -39,10 +39,10 @@ app.get('/app/client.*.js', async (c) => {
   });
 });
 
-// Serve favicon from R2
+// Serve favicon from STATIC bucket
 app.get('/favicon.svg', async (c) => {
   const env = c.env as Env;
-  const file = await env.CONTENT.get('favicon.svg');
+  const file = await env.STATIC.get('favicon.svg');
 
   if (!file) {
     return c.text('Favicon not found', 404);

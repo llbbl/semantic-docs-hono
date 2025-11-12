@@ -45,7 +45,18 @@ app.all('/', async (c) => {
     const sanitizedLimit = Math.min(Math.max(1, limit), 20);
 
     // Get AI Search index name from environment
-    const aiSearchIndex = c.env.AI_SEARCH_INDEX || 'semantic-docs';
+    const aiSearchIndex = c.env.AI_SEARCH_INDEX;
+
+    if (!aiSearchIndex) {
+      return c.json(
+        {
+          error: 'AI Search not configured',
+          message:
+            'AI_SEARCH_INDEX environment variable is not set. Please configure it in Cloudflare Dashboard.',
+        },
+        500,
+      );
+    }
 
     // Perform semantic search using Cloudflare AI Search
     const searchResponse = await c.env.AI.autorag(aiSearchIndex).search({
@@ -53,6 +64,18 @@ app.all('/', async (c) => {
       max_num_results: sanitizedLimit,
       rerank: true, // Enable reranking for better relevance
     });
+
+    // Check if results exist
+    if (!searchResponse || !searchResponse.results) {
+      return c.json(
+        {
+          error: 'Invalid search response',
+          message:
+            'AI Search returned an invalid response. Check if the index exists and has data.',
+        },
+        500,
+      );
+    }
 
     // Transform results to match previous API format
     const results = searchResponse.results.map((result) => ({
