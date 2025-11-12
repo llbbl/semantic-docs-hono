@@ -504,22 +504,22 @@ app.use('*', compress());
 
 ```bash
 # List files in content bucket
-wrangler r2 object list hono-content
+npx wrangler r2 object list hono-content --remote
 
 # List files in static bucket
-wrangler r2 object list hono-static
+npx wrangler r2 object list hono-static --remote
 ```
 
 ### Check File Size
 
 ```bash
-wrangler r2 object get hono-static/client.123456789.js --file=- | wc -c
+npx wrangler r2 object get hono-static/client.123456789.js --file=- --remote | wc -c
 ```
 
 ### View File Content
 
 ```bash
-wrangler r2 object get hono-content/features/intro.md
+npx wrangler r2 object get hono-content/features/intro.md --remote
 ```
 
 ### Delete Old Files
@@ -528,11 +528,189 @@ Clean up old timestamped bundles:
 
 ```bash
 # List all client.*.js files
-wrangler r2 object list hono-static --prefix="client."
+npx wrangler r2 object list hono-static --prefix="client." --remote
 
 # Delete old ones (keep latest)
-wrangler r2 object delete hono-static/client.1731369600000.js
+npx wrangler r2 object delete hono-static/client.1731369600000.js --remote
 ```
+
+## File Deletion Workflow
+
+### Important: Manual Deletion Required
+
+**Deleted files in the repo do NOT automatically delete from R2.**
+
+When you delete a markdown file from `content/` and push to GitHub:
+- ✅ File is removed from repository
+- ✅ File stops appearing in new builds
+- ❌ File **remains in R2 bucket**
+- ❌ File **remains in AI Search index**
+
+This is by design - the deployment workflow only uploads, never deletes.
+
+### Why No Automatic Deletion?
+
+**Safety reasons:**
+1. Prevents accidental data loss from git mistakes
+2. Allows rollback to previous content versions
+3. Avoids race conditions in concurrent deployments
+4. Keeps historical content for analytics
+
+**Trade-off:** You must manually clean up deleted files.
+
+### Deleting Content Files
+
+#### Step 1: Delete from Repository
+
+```bash
+# Delete local file
+rm content/features/old-doc.md
+
+# Commit and push
+git add content/features/old-doc.md
+git commit -m "Remove outdated documentation"
+git push
+```
+
+#### Step 2: Delete from R2
+
+```bash
+# Delete from content bucket
+npx wrangler r2 object delete hono-content/features/old-doc.md --remote
+
+# Verify deletion
+npx wrangler r2 object list hono-content --prefix="features/" --remote
+```
+
+#### Step 3: Wait for AI Search Re-index
+
+AI Search will eventually remove the file from its index (5-15 minutes), or manually trigger:
+
+1. Go to **Cloudflare Dashboard**
+2. Navigate to **AI** → **AI Search** → Your index
+3. Click **Sync** to force re-indexing
+
+**Note:** File will still appear in search results until AI Search re-indexes.
+
+### Deleting Static Files
+
+For old JavaScript bundles, CSS, or other static assets:
+
+```bash
+# List all client bundles
+npx wrangler r2 object list hono-static --prefix="client." --remote
+
+# Output:
+# client.1731369600000.js (old)
+# client.1731455000000.js (old)
+# client.1731541400000.js (current)
+
+# Delete old bundles (keep latest 2-3)
+npx wrangler r2 object delete hono-static/client.1731369600000.js --remote
+npx wrangler r2 object delete hono-static/client.1731455000000.js --remote
+```
+
+**Recommendation:** Keep 2-3 recent bundles for rollback capability.
+
+### Bulk Deletion
+
+Delete multiple files at once:
+
+```bash
+# Delete entire folder (careful!)
+npx wrangler r2 object delete hono-content/old-folder/file1.md --remote
+npx wrangler r2 object delete hono-content/old-folder/file2.md --remote
+npx wrangler r2 object delete hono-content/old-folder/file3.md --remote
+```
+
+**Warning:** R2 doesn't support wildcard deletion via CLI. You must delete files individually.
+
+#### Scripted Bulk Deletion
+
+For many files, use a script:
+
+```bash
+# List files to delete
+npx wrangler r2 object list hono-content --prefix="old-folder/" --remote | \
+  grep -v "^$" | \
+  while read -r file; do
+    echo "Deleting: $file"
+    npx wrangler r2 object delete "hono-content/$file" --remote
+  done
+```
+
+### Renaming/Moving Files
+
+R2 doesn't support renaming. To move a file:
+
+```bash
+# 1. Upload to new location
+npx wrangler r2 object put hono-content/new/path.md \
+  --file="content/new/path.md" --remote
+
+# 2. Delete old location
+npx wrangler r2 object delete hono-content/old/path.md --remote
+
+# 3. Update git
+git mv content/old/path.md content/new/path.md
+git commit -m "Move documentation file"
+git push
+```
+
+### Cleanup Checklist
+
+When removing content:
+
+- [ ] Delete file from local repository
+- [ ] Commit and push to GitHub
+- [ ] Delete from R2 content bucket: `npx wrangler r2 object delete hono-content/path/to/file.md --remote`
+- [ ] Verify deletion: `npx wrangler r2 object list hono-content --prefix="path/" --remote`
+- [ ] Wait for AI Search re-index (or manually trigger sync)
+- [ ] Test search to verify file no longer appears
+- [ ] Check for broken links in other documents
+- [ ] Update navigation/sidebar if needed
+
+### Automated Cleanup (Future Enhancement)
+
+To automate deletion in GitHub Actions, add this step to `deploy.yml`:
+
+```yaml
+# WARNING: This will delete files from R2 that don't exist in repo
+- name: Sync deletions to R2
+  run: |
+    # Get list of files in R2
+    REMOTE_FILES=$(npx wrangler r2 object list hono-content --json --remote | jq -r '.[].key')
+
+    # Check each remote file
+    for file in $REMOTE_FILES; do
+      LOCAL_PATH="content/$file"
+
+      # If file doesn't exist locally, delete from R2
+      if [ ! -f "$LOCAL_PATH" ]; then
+        echo "Deleting orphaned file: $file"
+        npx wrangler r2 object delete "hono-content/$file" --remote
+      fi
+    done
+```
+
+**Warning:** This is destructive. Test thoroughly before enabling.
+
+### Audit R2 Contents
+
+Regularly check for orphaned files:
+
+```bash
+# List all files in content bucket
+npx wrangler r2 object list hono-content --remote > r2-files.txt
+
+# Compare with local files
+find content -name "*.md" | sed 's|content/||' > local-files.txt
+
+# Find files in R2 but not locally (orphaned)
+comm -23 <(sort r2-files.txt) <(sort local-files.txt)
+```
+
+Files in the output are orphaned and can be safely deleted.
 
 ## Troubleshooting
 
@@ -542,7 +720,7 @@ wrangler r2 object delete hono-static/client.1731369600000.js
 
 **Check:**
 1. Verify bucket name in `wrangler.toml`
-2. Check file exists: `wrangler r2 object list hono-content`
+2. Check file exists: `npx wrangler r2 object list hono-content --remote`
 3. Verify binding name matches: `c.env.CONTENT` vs `STATIC`
 
 ```tsx

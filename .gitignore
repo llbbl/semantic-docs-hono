@@ -4,7 +4,6 @@ node_modules/
 # Build outputs
 dist/
 .astro/
-app/client-manifest.ts
 
 # Environment variables
 .env
@@ -44,4 +43,8 @@ local.db-wal
 *.db
 *.db-shm
 *.db-wal
+
+# cloudflare app files
 /manifest.json
+/.wrangler/
+app/client-manifest.ts
