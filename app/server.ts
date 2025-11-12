@@ -27,4 +27,19 @@ app.get('/app/client.js', async (c) => {
   });
 });
 
+// Serve favicon from R2
+app.get('/favicon.svg', async (c) => {
+  const env = c.env as Env;
+  const file = await env.CONTENT.get('favicon.svg');
+
+  if (!file) {
+    return c.text('Favicon not found', 404);
+  }
+
+  return c.body(await file.arrayBuffer(), 200, {
+    'Content-Type': 'image/svg+xml',
+    'Cache-Control': 'public, max-age=31536000',
+  });
+});
+
 export default app;

@@ -1,25 +1,43 @@
 import { hydrateRoot } from 'react-dom/client';
-import './style.css';
+import DocsToc from './islands/DocsToc';
+import Search from './islands/Search';
+import ThemeSwitcher from './islands/ThemeSwitcher';
 
-// This file handles client-side hydration for React island components
+// Island component registry
+const islands = {
+  DocsToc,
+  Search,
+  ThemeSwitcher,
+};
 
-// Get all island elements
-const islands = document.querySelectorAll('[data-hydrate]');
+// Wait for DOM to be ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', hydrateIslands);
+} else {
+  hydrateIslands();
+}
 
-islands.forEach((island) => {
-  const componentName = island.getAttribute('data-component');
-  const propsJson = island.getAttribute('data-props');
-  const props = propsJson ? JSON.parse(propsJson) : {};
+function hydrateIslands() {
+  // Get all island elements
+  const islandElements = document.querySelectorAll('[data-hydrate]');
 
-  // Dynamic import and hydrate the island component
-  if (componentName) {
-    import(`./islands/${componentName}.tsx`)
-      .then((module) => {
-        const Component = module.default;
-        hydrateRoot(island, <Component {...props} />);
-      })
-      .catch((error) => {
-        console.error(`Failed to hydrate island: ${componentName}`, error);
-      });
-  }
-});
+  islandElements.forEach((element) => {
+    const componentName = element.getAttribute('data-component');
+    const propsJson = element.getAttribute('data-props');
+
+    if (!componentName) return;
+
+    const Component = islands[componentName as keyof typeof islands];
+    if (!Component) {
+      console.error(`Island component not found: ${componentName}`);
+      return;
+    }
+
+    try {
+      const props = propsJson ? JSON.parse(propsJson) : {};
+      hydrateRoot(element, <Component {...props} />);
+    } catch (error) {
+      console.error(`Failed to hydrate island: ${componentName}`, error);
+    }
+  });
+}
