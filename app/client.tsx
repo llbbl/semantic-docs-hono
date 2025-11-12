@@ -1,4 +1,5 @@
 import { hydrateRoot } from 'react-dom/client';
+import './style.css';
 
 // This file handles client-side hydration for React island components
 

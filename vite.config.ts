@@ -10,7 +10,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(() => {
   return {
-    plugins: [honox(), tailwindcss(), devServer(), build()],
+    plugins: [
+      honox(),
+      tailwindcss(),
+      devServer(),
+      build({
+        outputDir: './dist',
+        emptyOutDir: false,
+      }),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -22,6 +30,13 @@ export default defineConfig(() => {
       resolve: {
         conditions: ['workerd', 'worker', 'browser'],
         externalConditions: ['workerd', 'worker', 'browser'],
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          assetFileNames: 'static/[name].[hash][extname]',
+        },
       },
     },
   };
