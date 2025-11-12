@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * Docs Table of Contents Component
  * Automatically generated from page headings

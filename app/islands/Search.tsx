@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * Semantic Search Component
  *

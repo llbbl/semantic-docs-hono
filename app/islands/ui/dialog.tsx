@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 // @ts-nocheck - React 19 type compatibility issues with radix-ui library
 'use client';
 

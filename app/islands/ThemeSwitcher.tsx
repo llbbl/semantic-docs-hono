@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 /**
  * Theme Switcher Component
  * Allows users to switch between different color themes
