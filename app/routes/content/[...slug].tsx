@@ -121,7 +121,7 @@ export default createRoute(async (c) => {
           `,
           }}
         />
-        <script type="module" src="/app/client.tsx" />
+        <script type="module" src="/app/client.js" />
       </head>
       <body className="min-h-screen bg-background text-foreground">
         <div>

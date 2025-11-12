@@ -33,7 +33,7 @@ export default createRoute(async (c) => {
           `,
           }}
         />
-        <script type="module" src="/app/client.tsx" />
+        <script type="module" src="/app/client.js" />
       </head>
       <body className="min-h-screen bg-background text-foreground">
         <div>
@@ -53,8 +53,8 @@ export default createRoute(async (c) => {
                       Welcome to Your Documentation
                     </h1>
                     <p className="text-lg text-muted-foreground leading-relaxed">
-                      Your content is powered by libSQL with vector search
-                      capabilities.
+                      Your content is powered by Cloudflare R2 and AI Search for
+                      blazing-fast semantic search.
                     </p>
                   </div>
 
@@ -64,20 +64,20 @@ export default createRoute(async (c) => {
                     </h2>
                     <ul className="space-y-2">
                       <li>
-                        📝 <strong>Database Storage</strong>: Content stored in
-                        distributed libSQL database
+                        📦 <strong>R2 Storage</strong>: Content stored in
+                        Cloudflare R2 for edge delivery
                       </li>
                       <li>
-                        🔍 <strong>Semantic Search</strong>: AI-powered vector
-                        search
+                        🔍 <strong>AI Search</strong>: Cloudflare AI Search with
+                        automatic indexing
                       </li>
                       <li>
-                        🚀 <strong>Edge-Ready</strong>: Fast global access via
-                        Turso
+                        🚀 <strong>Edge-Ready</strong>: Runs on Cloudflare
+                        Workers globally
                       </li>
                       <li>
-                        🆓 <strong>Free Options</strong>: Local embeddings or
-                        Gemini API
+                        ⚡ <strong>Fast Deployment</strong>: CI/CD via GitHub
+                        Actions
                       </li>
                     </ul>
                   </section>
@@ -87,8 +87,8 @@ export default createRoute(async (c) => {
                       Getting Started
                     </h2>
                     <p className="text-base leading-relaxed mb-4">
-                      Select an article from the sidebar or use the search bar
-                      for semantic search.
+                      Select an article from the sidebar or press ⌘K to open
+                      semantic search.
                     </p>
                   </section>
                 </article>
