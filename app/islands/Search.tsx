@@ -175,13 +175,11 @@ export default function Search({
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        {/* @ts-expect-error - React 19 type compatibility with cmdk */}
         <CommandInput
           placeholder={placeholder}
           value={query}
           onValueChange={handleValueChange}
         />
-        {/* @ts-expect-error - React 19 type compatibility with cmdk */}
         <CommandList>
           {loading && (
             <div className="py-6 text-center text-sm text-muted-foreground">
@@ -194,7 +192,6 @@ export default function Search({
             </div>
           )}
           {!loading && !error && query.length >= 2 && results.length === 0 && (
-            // @ts-expect-error - React 19 type compatibility with cmdk
             <CommandEmpty>No results found for "{query}"</CommandEmpty>
           )}
           {!loading && !error && query.length < 2 && (
@@ -205,7 +202,6 @@ export default function Search({
           {!loading &&
             !error &&
             Object.entries(groupedResults).map(([folder, folderResults]) => (
-              // @ts-expect-error - React 19 type compatibility with cmdk
               <CommandGroup key={folder} heading={folder.toUpperCase()}>
                 {folderResults.map((result) => {
                   const title = result.metadata?.title || 'Untitled';
@@ -213,7 +209,6 @@ export default function Search({
                   const tags = result.metadata?.tags || [];
 
                   return (
-                    // @ts-expect-error - React 19 type compatibility with cmdk
                     <CommandItem
                       key={slug || title}
                       value={title}

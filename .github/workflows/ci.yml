@@ -28,6 +28,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Create placeholder client manifest
+        run: |
+          mkdir -p app
+          echo "// Auto-generated - do not edit" > app/client-manifest.ts
+          echo "export const clientFilename = 'client.placeholder.js';" >> app/client-manifest.ts
+
       - name: Run tests
         run: pnpm test --run
 
@@ -54,6 +60,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      - name: Create placeholder client manifest
+        run: |
+          mkdir -p app
+          echo "// Auto-generated - do not edit" > app/client-manifest.ts
+          echo "export const clientFilename = 'client.placeholder.js';" >> app/client-manifest.ts
 
       - name: Check TypeScript
         run: pnpm exec tsc --noEmit

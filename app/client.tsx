@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import { createRoot } from 'react-dom/client';
 import DocsToc from './islands/DocsToc';
 import Search from './islands/Search';
