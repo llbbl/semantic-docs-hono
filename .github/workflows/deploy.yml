@@ -37,7 +37,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx wrangler r2 object put ${{ vars.R2_BUCKET_NAME }}/manifest.json \
-            --file=manifest.json
+            --file=manifest.json \
+            --remote
 
       - name: Upload content to R2
         env:
@@ -49,7 +50,7 @@ jobs:
             # Get relative path from content directory
             relative_path="${file#./content/}"
             echo "Uploading: $relative_path"
-            npx wrangler r2 object put "${{ vars.R2_BUCKET_NAME }}/$relative_path" --file="$file"
+            npx wrangler r2 object put "${{ vars.R2_BUCKET_NAME }}/$relative_path" --file="$file" --remote
           done
 
       - name: Build worker
