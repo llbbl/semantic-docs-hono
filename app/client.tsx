@@ -1,4 +1,4 @@
-import { hydrateRoot } from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import DocsToc from './islands/DocsToc';
 import Search from './islands/Search';
 import ThemeSwitcher from './islands/ThemeSwitcher';
@@ -12,12 +12,12 @@ const islands = {
 
 // Wait for DOM to be ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', hydrateIslands);
+  document.addEventListener('DOMContentLoaded', mountIslands);
 } else {
-  hydrateIslands();
+  mountIslands();
 }
 
-function hydrateIslands() {
+function mountIslands() {
   // Get all island elements
   const islandElements = document.querySelectorAll('[data-hydrate]');
 
@@ -35,9 +35,10 @@ function hydrateIslands() {
 
     try {
       const props = propsJson ? JSON.parse(propsJson) : {};
-      hydrateRoot(element, <Component {...props} />);
+      const root = createRoot(element);
+      root.render(<Component {...props} />);
     } catch (error) {
-      console.error(`Failed to hydrate island: ${componentName}`, error);
+      console.error(`Failed to mount island: ${componentName}`, error);
     }
   });
 }
