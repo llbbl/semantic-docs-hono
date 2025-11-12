@@ -65,13 +65,28 @@ app.all('/', async (c) => {
       rerank: true, // Enable reranking for better relevance
     });
 
+    // Log response for debugging
+    logger.info('AI Search response', {
+      hasResponse: !!searchResponse,
+      hasResults: !!searchResponse?.results,
+      responseType: typeof searchResponse,
+      resultCount: searchResponse?.results?.length || 0,
+    });
+
     // Check if results exist
     if (!searchResponse || !searchResponse.results) {
+      logger.error('Invalid AI Search response', {
+        response: JSON.stringify(searchResponse),
+      });
       return c.json(
         {
           error: 'Invalid search response',
           message:
             'AI Search returned an invalid response. Check if the index exists and has data.',
+          debug:
+            process.env.NODE_ENV === 'development'
+              ? { response: searchResponse }
+              : undefined,
         },
         500,
       );
