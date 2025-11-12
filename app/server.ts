@@ -12,18 +12,30 @@ app.get('/app/style.css', (c) => {
   });
 });
 
-// Serve client JS from R2
-app.get('/app/client.js', async (c) => {
+// Serve client JS from R2 (with wildcard to support cache-busted filenames)
+app.get('/app/client.*.js', async (c) => {
   const env = c.env as Env;
-  const file = await env.CONTENT.get('static/client.js');
 
+  // List files in static/ to find the latest client.*.js
+  const listed = await env.CONTENT.list({ prefix: 'static/client.' });
+  const clientFiles = listed.objects
+    .filter((obj) => obj.key.endsWith('.js'))
+    .sort(
+      (a, b) => (b.uploaded?.getTime() || 0) - (a.uploaded?.getTime() || 0),
+    );
+
+  if (clientFiles.length === 0) {
+    return c.text('Client bundle not found', 404);
+  }
+
+  const file = await env.CONTENT.get(clientFiles[0].key);
   if (!file) {
     return c.text('Client bundle not found', 404);
   }
 
   return c.body(await file.arrayBuffer(), 200, {
     'Content-Type': 'application/javascript',
-    'Cache-Control': 'public, max-age=31536000',
+    'Cache-Control': 'public, max-age=31536000, immutable',
   });
 });
 

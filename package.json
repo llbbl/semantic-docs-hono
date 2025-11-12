@@ -18,17 +18,18 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/llbbl/semantic-docs.git"
+    "url": "https://github.com/llbbl/semantic-docs-hono.git"
   },
   "bugs": {
-    "url": "https://github.com/llbbl/semantic-docs/issues"
+    "url": "https://github.com/llbbl/semantic-docs-hono/issues"
   },
-  "homepage": "https://github.com/llbbl/semantic-docs#readme",
+  "homepage": "https://github.com/llbbl/semantic-docs-hono#readme",
   "scripts": {
     "dev": "vite",
-    "build": "pnpm build:client && pnpm build:server",
+    "build": "pnpm build:client && pnpm generate:client-manifest && pnpm build:server",
     "build:server": "vite build",
     "build:client": "vite build --config vite.client.config.ts",
+    "generate:client-manifest": "tsx scripts/generate-client-manifest.ts",
     "preview": "wrangler dev",
     "deploy": "wrangler deploy",
     "generate:manifest": "tsx scripts/generate-manifest.ts",

@@ -1,5 +1,6 @@
 import { createRoute } from 'honox/factory';
 import { marked } from 'marked';
+import { clientFilename } from '~/client-manifest';
 import DocsHeader from '~/components/DocsHeader';
 import DocsSidebar from '~/components/DocsSidebar';
 import type { Env, Manifest } from '../../types';
@@ -121,7 +122,7 @@ export default createRoute(async (c) => {
           `,
           }}
         />
-        <script type="module" src="/app/client.js" />
+        <script type="module" src={`/app/${clientFilename}`} />
       </head>
       <body className="min-h-screen bg-background text-foreground">
         <div>

@@ -19,7 +19,7 @@ export default defineConfig({
     lib: {
       entry: path.resolve(__dirname, 'app/client.tsx'),
       name: 'Client',
-      fileName: () => 'client.js',
+      fileName: () => `client.${Date.now()}.js`,
       formats: ['es'],
     },
     rollupOptions: {
